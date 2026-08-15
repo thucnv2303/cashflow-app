@@ -186,15 +186,81 @@ const Storage = {
   },
 
   async testConnection() {
+    const url = this.getApiUrl();
+    if (!url) return { success: false, message: 'Chưa nhập URL' };
+    if (!url.includes('/exec')) {
+      return { success: false, message: 'URL phải kết thúc bằng /exec. Kiểm tra lại URL deploy.' };
+    }
+    
     try {
-      const res = await this._sheetApiCall('ping');
-      if (res && res.status === 'ok') {
-        return { success: true, message: res.message || 'Kết nối thành công!' };
+      // Thử fetch trực tiếp trước
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12000);
+      try {
+        const response = await fetch(`${url}?action=ping`, {
+          method: 'GET',
+          redirect: 'follow',
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+        const text = await response.text();
+        
+        // Phát hiện Google Login page
+        if (text.includes('accounts.google.com') || text.includes('ServiceLogin') || text.includes('identifierview')) {
+          return { 
+            success: false, 
+            message: '⚠️ Apps Script yêu cầu đăng nhập! Khi Deploy phải chọn: Execute as → Me, Who has access → Anyone. Sau đó tạo New deployment mới.' 
+          };
+        }
+        
+        // Phát hiện HTML error page
+        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+          return { 
+            success: false, 
+            message: '⚠️ Apps Script trả về HTML thay vì JSON. Cần Deploy lại: Execute as → Me, Who has access → Anyone.' 
+          };
+        }
+        
+        try {
+          const data = JSON.parse(text);
+          if (data && data.status === 'ok') {
+            return { success: true, message: data.message || 'Kết nối thành công! ✅' };
+          }
+          if (data && data.error) {
+            return { success: false, message: 'Lỗi từ server: ' + data.error };
+          }
+          return { success: false, message: 'Phản hồi không hợp lệ' };
+        } catch {
+          return { success: false, message: 'Phản hồi không phải JSON hợp lệ. Kiểm tra code Apps Script.' };
+        }
+      } catch (fetchErr) {
+        clearTimeout(timeout);
+        console.warn('Fetch test failed:', fetchErr.message);
+        
+        // CORS error → thử JSONP
+        if (fetchErr.message === 'Failed to fetch' || fetchErr.name === 'TypeError') {
+          try {
+            const data = await this._jsonpCall(`${url}?action=ping`, 12000);
+            if (data && data.status === 'ok') {
+              return { success: true, message: 'Kết nối thành công (JSONP)! ✅' };
+            }
+            return { success: false, message: 'JSONP response không hợp lệ' };
+          } catch (jsonpErr) {
+            return { 
+              success: false, 
+              message: '⚠️ Không kết nối được. Lỗi CORS + JSONP. Kiểm tra:\n1. Deploy → Execute as: Me\n2. Who has access: Anyone\n3. Đã chạy setupSheet() và cấp quyền\n4. Copy code MỚI NHẤT từ app vào Apps Script' 
+            };
+          }
+        }
+        
+        if (fetchErr.name === 'AbortError') {
+          return { success: false, message: 'Quá thời gian kết nối (12s). Kiểm tra lại URL.' };
+        }
+        return { success: false, message: 'Lỗi kết nối: ' + fetchErr.message };
       }
-      return { success: false, message: 'Phản hồi không hợp lệ từ máy chủ' };
     } catch (error) {
       console.error('Test connection error:', error);
-      return { success: false, message: 'Lỗi kết nối: ' + error.message };
+      return { success: false, message: 'Lỗi: ' + error.message };
     }
   },
 

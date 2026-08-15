@@ -53,16 +53,22 @@ function findRowById(sheet, id) {
   return -1;
 }
 
-function responseJson(data) {
-  return ContentService.createTextOutput(JSON.stringify(data))
+function responseJson(data, callback) {
+  var json = JSON.stringify(data);
+  if (callback) {
+    return ContentService.createTextOutput(callback + '(' + json + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService.createTextOutput(json)
     .setMimeType(ContentService.MimeType.JSON);
 }
 
 function doGet(e) {
   const action = e.parameter.action || 'getAll';
+  const cb = e.parameter.callback || null;
   
   if (action === 'ping') {
-    return responseJson({ status: 'ok', message: 'Kết nối thành công!' });
+    return responseJson({ status: 'ok', message: 'Kết nối thành công!' }, cb);
   }
   
   const lock = LockService.getScriptLock();
@@ -72,7 +78,7 @@ function doGet(e) {
     // ==================== TRANSACTIONS ====================
     if (action === 'getAll') {
       const sheet = getSheet('Transactions');
-      if (!sheet) return responseJson({ success: true, data: [] });
+      if (!sheet) return responseJson({ success: true, data: [] }, cb);
       const data = sheet.getDataRange().getValues();
       const transactions = [];
       for (let i = 1; i < data.length; i++) {
@@ -84,7 +90,7 @@ function doGet(e) {
           });
         }
       }
-      return responseJson({ success: true, data: transactions });
+      return responseJson({ success: true, data: transactions }, cb);
     }
     
     if (action === 'add') {
@@ -94,7 +100,7 @@ function doGet(e) {
         obj.category || '', obj.note || '', obj.date || '',
         obj.memberId || '', obj.createdAt || new Date().toISOString()
       ]);
-      return responseJson({ success: true, message: 'Đã thêm giao dịch' });
+      return responseJson({ success: true, message: 'Đã thêm giao dịch' }, cb);
     }
     
     if (action === 'update') {
@@ -108,7 +114,7 @@ function doGet(e) {
           obj.category || '', obj.note || '', obj.date || '',
           obj.memberId || '', obj.createdAt || ''
         ]]);
-        return responseJson({ success: true });
+        return responseJson({ success: true }, cb);
       }
       throw new Error('Không tìm thấy giao dịch');
     }
@@ -116,7 +122,7 @@ function doGet(e) {
     if (action === 'delete') {
       const sheet = getSheet('Transactions');
       const rowNum = findRowById(sheet, e.parameter.id);
-      if (rowNum > -1) { sheet.deleteRow(rowNum); return responseJson({ success: true }); }
+      if (rowNum > -1) { sheet.deleteRow(rowNum); return responseJson({ success: true }, cb); }
       throw new Error('Không tìm thấy');
     }
     
@@ -133,13 +139,13 @@ function doGet(e) {
         ]);
         sheet.getRange(2, 1, rows.length, 8).setValues(rows);
       }
-      return responseJson({ success: true, message: 'Đã đồng bộ giao dịch' });
+      return responseJson({ success: true, message: 'Đã đồng bộ giao dịch' }, cb);
     }
     
     // ==================== LOANS ====================
     if (action === 'getLoans') {
       const sheet = getSheet('Loans');
-      if (!sheet) return responseJson({ success: true, data: [] });
+      if (!sheet) return responseJson({ success: true, data: [] }, cb);
       const data = sheet.getDataRange().getValues();
       const loans = [];
       for (let i = 1; i < data.length; i++) {
@@ -153,7 +159,7 @@ function doGet(e) {
           });
         }
       }
-      return responseJson({ success: true, data: loans });
+      return responseJson({ success: true, data: loans }, cb);
     }
     
     if (action === 'syncLoans') {
@@ -169,13 +175,13 @@ function doGet(e) {
         ]);
         sheet.getRange(2, 1, rows.length, 11).setValues(rows);
       }
-      return responseJson({ success: true, message: 'Đã đồng bộ khoản vay' });
+      return responseJson({ success: true, message: 'Đã đồng bộ khoản vay' }, cb);
     }
     
     // ==================== MEMBERS ====================
     if (action === 'getMembers') {
       const sheet = getSheet('Members');
-      if (!sheet) return responseJson({ success: true, data: [] });
+      if (!sheet) return responseJson({ success: true, data: [] }, cb);
       const data = sheet.getDataRange().getValues();
       const members = [];
       for (let i = 1; i < data.length; i++) {
@@ -185,7 +191,7 @@ function doGet(e) {
           });
         }
       }
-      return responseJson({ success: true, data: members });
+      return responseJson({ success: true, data: members }, cb);
     }
     
     if (action === 'syncMembers') {
@@ -197,13 +203,13 @@ function doGet(e) {
         const rows = members.map(m => [m.id || '', m.name || '', m.avatar || '', m.color || '']);
         sheet.getRange(2, 1, rows.length, 4).setValues(rows);
       }
-      return responseJson({ success: true, message: 'Đã đồng bộ thành viên' });
+      return responseJson({ success: true, message: 'Đã đồng bộ thành viên' }, cb);
     }
     
-    return responseJson({ success: false, error: 'Hành động không hợp lệ' });
+    return responseJson({ success: false, error: 'Hành động không hợp lệ' }, cb);
     
   } catch (error) {
-    return responseJson({ success: false, error: error.toString() });
+    return responseJson({ success: false, error: error.toString() }, cb);
   } finally {
     lock.releaseLock();
   }
