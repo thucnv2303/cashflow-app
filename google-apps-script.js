@@ -1,73 +1,56 @@
 /**
- * Hướng dẫn cài đặt (Setup Instructions):
- * 1. Mở Google Sheets, tạo một Spreadsheet mới hoặc mở một Spreadsheet có sẵn.
- * 2. Trên menu, chọn Tiện ích mở rộng (Extensions) > Apps Script.
- * 3. Xóa code có sẵn và dán toàn bộ nội dung file này vào.
- * 4. Chạy hàm `setupSheet` (chọn setupSheet trên thanh công cụ rồi nhấn Run). Cấp quyền nếu được yêu cầu.
- * 5. Bấm Deploy > New deployment.
- *    - Select type: Web app
- *    - Execute as: Me (Tài khoản của bạn)
- *    - Who has access: Anyone (Bất kỳ ai)
- * 6. Bấm Deploy, sao chép Web app URL và dán vào Cài đặt trong ứng dụng CashFlow của bạn.
+ * CashFlow v2 - Google Apps Script API
+ * Hỗ trợ: Transactions, Loans, Members
+ * 
+ * Hướng dẫn:
+ * 1. Mở Google Sheets → Tiện ích mở rộng → Apps Script
+ * 2. Xóa code cũ, dán code này vào → Lưu
+ * 3. Chọn hàm "setupSheet" → ▶️ Run → cấp quyền
+ * 4. Deploy → New deployment → Web app → Anyone → Deploy → copy URL
+ * 5. Dán URL vào CashFlow → Cài đặt → Kiểm tra → Xong!
  */
 
 function setupSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName('Transactions');
   
+  // Sheet Transactions
+  let sheet = ss.getSheetByName('Transactions');
   if (!sheet) {
     sheet = ss.insertSheet('Transactions');
-    // Tạo headers
-    sheet.appendRow(['ID', 'Loại', 'Số tiền', 'Danh mục', 'Ghi chú', 'Ngày', 'Ngày tạo']);
-    // Cố định hàng đầu tiên
+    sheet.appendRow(['ID', 'Loại', 'Số tiền', 'Danh mục', 'Ghi chú', 'Ngày', 'Thành viên', 'Ngày tạo']);
     sheet.setFrozenRows(1);
-    // Làm đậm hàng đầu
-    sheet.getRange('A1:G1').setFontWeight('bold');
+    sheet.getRange('A1:H1').setFontWeight('bold');
+  }
+  
+  // Sheet Loans
+  let loanSheet = ss.getSheetByName('Loans');
+  if (!loanSheet) {
+    loanSheet = ss.insertSheet('Loans');
+    loanSheet.appendRow(['ID', 'Tên', 'Emoji', 'Loại', 'Gốc vay', 'Lãi suất', 'Kỳ hạn', 'Trả/tháng', 'Ngày BĐ', 'Ghi chú', 'Ngày tạo']);
+    loanSheet.setFrozenRows(1);
+    loanSheet.getRange('A1:K1').setFontWeight('bold');
+  }
+  
+  // Sheet Members
+  let memberSheet = ss.getSheetByName('Members');
+  if (!memberSheet) {
+    memberSheet = ss.insertSheet('Members');
+    memberSheet.appendRow(['ID', 'Tên', 'Avatar', 'Màu']);
+    memberSheet.setFrozenRows(1);
+    memberSheet.getRange('A1:D1').setFontWeight('bold');
   }
 }
 
-function getSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName('Transactions');
-  if (!sheet) {
-    setupSheet();
-    sheet = ss.getSheetByName('Transactions');
-  }
-  return sheet;
+function getSheet(name) {
+  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
 }
 
 function findRowById(sheet, id) {
   const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) { // Bỏ qua header
-    if (data[i][0] === id) {
-      return i + 1; // getRange bắt đầu từ 1
-    }
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === id) return i + 1;
   }
   return -1;
-}
-
-function rowToObject(row) {
-  return {
-    id: row[0],
-    type: row[1],
-    amount: Number(row[2]),
-    category: row[3],
-    note: row[4],
-    date: row[5],
-    createdAt: row[6]
-  };
-}
-
-function objectToRow(obj) {
-  return [
-    obj.id || '',
-    obj.type || '',
-    obj.amount || 0,
-    obj.category || '',
-    obj.note || '',
-    obj.date || '',
-    obj.createdAt || new Date().toISOString()
-  ];
 }
 
 function responseJson(data) {
@@ -76,7 +59,6 @@ function responseJson(data) {
 }
 
 function doGet(e) {
-  // Lấy parameter 'action', mặc định là 'getAll'
   const action = e.parameter.action || 'getAll';
   
   if (action === 'ping') {
@@ -85,83 +67,140 @@ function doGet(e) {
   
   const lock = LockService.getScriptLock();
   try {
-    // Chờ tối đa 10 giây để lấy lock
     lock.waitLock(10000);
     
-    const sheet = getSheet();
-    
+    // ==================== TRANSACTIONS ====================
     if (action === 'getAll') {
+      const sheet = getSheet('Transactions');
+      if (!sheet) return responseJson({ success: true, data: [] });
       const data = sheet.getDataRange().getValues();
       const transactions = [];
       for (let i = 1; i < data.length; i++) {
-        if (data[i][0]) { // Kiểm tra nếu ID không rỗng
-          transactions.push(rowToObject(data[i]));
+        if (data[i][0]) {
+          transactions.push({
+            id: data[i][0], type: data[i][1], amount: Number(data[i][2]),
+            category: data[i][3], note: data[i][4], date: data[i][5],
+            memberId: data[i][6], createdAt: data[i][7]
+          });
         }
       }
       return responseJson({ success: true, data: transactions });
     }
     
-    else if (action === 'add') {
-      const dataStr = e.parameter.data;
-      if (!dataStr) throw new Error('Thiếu dữ liệu (data)');
-      const obj = JSON.parse(dataStr);
-      
-      sheet.appendRow(objectToRow(obj));
+    if (action === 'add') {
+      const obj = JSON.parse(e.parameter.data);
+      getSheet('Transactions').appendRow([
+        obj.id || '', obj.type || '', obj.amount || 0,
+        obj.category || '', obj.note || '', obj.date || '',
+        obj.memberId || '', obj.createdAt || new Date().toISOString()
+      ]);
       return responseJson({ success: true, message: 'Đã thêm giao dịch' });
     }
     
-    else if (action === 'update') {
+    if (action === 'update') {
       const id = e.parameter.id;
-      const dataStr = e.parameter.data;
-      if (!id || !dataStr) throw new Error('Thiếu ID hoặc dữ liệu');
-      const obj = JSON.parse(dataStr);
-      
+      const obj = JSON.parse(e.parameter.data);
+      const sheet = getSheet('Transactions');
       const rowNum = findRowById(sheet, id);
       if (rowNum > -1) {
-        // Ghi đè dòng hiện tại
-        const newRow = objectToRow(obj);
-        sheet.getRange(rowNum, 1, 1, newRow.length).setValues([newRow]);
-        return responseJson({ success: true, message: 'Đã cập nhật giao dịch' });
-      } else {
-        throw new Error('Không tìm thấy giao dịch với ID này');
+        sheet.getRange(rowNum, 1, 1, 8).setValues([[
+          obj.id || id, obj.type || '', obj.amount || 0,
+          obj.category || '', obj.note || '', obj.date || '',
+          obj.memberId || '', obj.createdAt || ''
+        ]]);
+        return responseJson({ success: true });
       }
+      throw new Error('Không tìm thấy giao dịch');
     }
     
-    else if (action === 'delete') {
-      const id = e.parameter.id;
-      if (!id) throw new Error('Thiếu ID');
-      
-      const rowNum = findRowById(sheet, id);
-      if (rowNum > -1) {
-        sheet.deleteRow(rowNum);
-        return responseJson({ success: true, message: 'Đã xóa giao dịch' });
-      } else {
-        throw new Error('Không tìm thấy giao dịch với ID này');
-      }
+    if (action === 'delete') {
+      const sheet = getSheet('Transactions');
+      const rowNum = findRowById(sheet, e.parameter.id);
+      if (rowNum > -1) { sheet.deleteRow(rowNum); return responseJson({ success: true }); }
+      throw new Error('Không tìm thấy');
     }
     
-    else if (action === 'sync') {
-      const dataStr = e.parameter.data;
-      if (!dataStr) throw new Error('Thiếu dữ liệu đồng bộ');
-      const transactions = JSON.parse(dataStr);
-      
-      // Xóa tất cả dữ liệu cũ (giữ lại header)
+    if (action === 'sync') {
+      const transactions = JSON.parse(e.parameter.data);
+      const sheet = getSheet('Transactions');
       const lastRow = sheet.getLastRow();
-      if (lastRow > 1) {
-        sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
-      }
-      
-      // Thêm tất cả dữ liệu mới
+      if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
       if (transactions && transactions.length > 0) {
-        const rows = transactions.map(t => objectToRow(t));
-        sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+        const rows = transactions.map(t => [
+          t.id || '', t.type || '', t.amount || 0,
+          t.category || '', t.note || '', t.date || '',
+          t.memberId || '', t.createdAt || ''
+        ]);
+        sheet.getRange(2, 1, rows.length, 8).setValues(rows);
       }
-      return responseJson({ success: true, message: 'Đã đồng bộ toàn bộ dữ liệu' });
+      return responseJson({ success: true, message: 'Đã đồng bộ giao dịch' });
     }
     
-    else {
-      return responseJson({ success: false, error: 'Hành động không hợp lệ' });
+    // ==================== LOANS ====================
+    if (action === 'getLoans') {
+      const sheet = getSheet('Loans');
+      if (!sheet) return responseJson({ success: true, data: [] });
+      const data = sheet.getDataRange().getValues();
+      const loans = [];
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0]) {
+          loans.push({
+            id: data[i][0], name: data[i][1], emoji: data[i][2],
+            loanType: data[i][3], principal: Number(data[i][4]),
+            interestRate: Number(data[i][5]), termMonths: Number(data[i][6]),
+            monthlyPayment: Number(data[i][7]), startDate: data[i][8],
+            note: data[i][9], createdAt: data[i][10]
+          });
+        }
+      }
+      return responseJson({ success: true, data: loans });
     }
+    
+    if (action === 'syncLoans') {
+      const loans = JSON.parse(e.parameter.data);
+      const sheet = getSheet('Loans');
+      const lastRow = sheet.getLastRow();
+      if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
+      if (loans && loans.length > 0) {
+        const rows = loans.map(l => [
+          l.id || '', l.name || '', l.emoji || '', l.loanType || '',
+          l.principal || 0, l.interestRate || 0, l.termMonths || 0,
+          l.monthlyPayment || 0, l.startDate || '', l.note || '', l.createdAt || ''
+        ]);
+        sheet.getRange(2, 1, rows.length, 11).setValues(rows);
+      }
+      return responseJson({ success: true, message: 'Đã đồng bộ khoản vay' });
+    }
+    
+    // ==================== MEMBERS ====================
+    if (action === 'getMembers') {
+      const sheet = getSheet('Members');
+      if (!sheet) return responseJson({ success: true, data: [] });
+      const data = sheet.getDataRange().getValues();
+      const members = [];
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0]) {
+          members.push({
+            id: data[i][0], name: data[i][1], avatar: data[i][2], color: data[i][3]
+          });
+        }
+      }
+      return responseJson({ success: true, data: members });
+    }
+    
+    if (action === 'syncMembers') {
+      const members = JSON.parse(e.parameter.data);
+      const sheet = getSheet('Members');
+      const lastRow = sheet.getLastRow();
+      if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
+      if (members && members.length > 0) {
+        const rows = members.map(m => [m.id || '', m.name || '', m.avatar || '', m.color || '']);
+        sheet.getRange(2, 1, rows.length, 4).setValues(rows);
+      }
+      return responseJson({ success: true, message: 'Đã đồng bộ thành viên' });
+    }
+    
+    return responseJson({ success: false, error: 'Hành động không hợp lệ' });
     
   } catch (error) {
     return responseJson({ success: false, error: error.toString() });

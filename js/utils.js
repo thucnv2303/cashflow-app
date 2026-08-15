@@ -2,18 +2,18 @@
 const CATEGORIES = {
   expense: [
     { id: 'food', emoji: '🍜', label: 'Ăn uống' },
-    { id: 'housing', emoji: '🏠', label: 'Nhà cửa' },
     { id: 'transport', emoji: '🚗', label: 'Di chuyển' },
     { id: 'shopping', emoji: '🛒', label: 'Mua sắm' },
-    { id: 'health', emoji: '💊', label: 'Y tế' },
     { id: 'entertainment', emoji: '🎮', label: 'Giải trí' },
+    { id: 'health', emoji: '💊', label: 'Y tế' },
     { id: 'education', emoji: '📚', label: 'Học tập' },
-    { id: 'other_expense', emoji: '📦', label: 'Khác' }
+    { id: 'bills', emoji: '🧾', label: 'Hóa đơn' },
+    { id: 'other', emoji: '📦', label: 'Khác' }
   ],
   income: [
     { id: 'salary', emoji: '💰', label: 'Lương' },
-    { id: 'investment', emoji: '📈', label: 'Đầu tư' },
     { id: 'freelance', emoji: '💻', label: 'Freelance' },
+    { id: 'investment', emoji: '📈', label: 'Đầu tư' },
     { id: 'gift', emoji: '🎁', label: 'Quà tặng' },
     { id: 'other_income', emoji: '💵', label: 'Khác' }
   ]
@@ -24,6 +24,29 @@ const CHART_COLORS = [
   '#6c5ce7', '#00b894', '#e17055', '#fdcb6e', 
   '#0984e3', '#e84393', '#00cec9', '#fab1a0',
   '#a29bfe', '#55efc4', '#ff7675', '#ffeaa7'
+];
+
+// Avatar System
+const AVATARS = [
+  { id: 'avatar_man', emoji: '👨', label: 'Anh' },
+  { id: 'avatar_woman', emoji: '👩', label: 'Chị' },
+  { id: 'avatar_boy', emoji: '👦', label: 'Con trai' },
+  { id: 'avatar_girl', emoji: '👧', label: 'Con gái' },
+  { id: 'avatar_grandpa', emoji: '👴', label: 'Ông' },
+  { id: 'avatar_grandma', emoji: '👵', label: 'Bà' },
+];
+
+const MEMBER_COLORS = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444'];
+
+// Loan Emojis
+const LOAN_TYPES = [
+  { id: 'house', emoji: '🏠', label: 'Vay mua nhà' },
+  { id: 'car', emoji: '🚗', label: 'Trả góp xe' },
+  { id: 'education', emoji: '🎓', label: 'Vay học phí' },
+  { id: 'personal', emoji: '💰', label: 'Vay cá nhân' },
+  { id: 'business', emoji: '💼', label: 'Vay kinh doanh' },
+  { id: 'credit_card', emoji: '💳', label: 'Thẻ tín dụng' },
+  { id: 'other_loan', emoji: '📄', label: 'Khoản vay khác' },
 ];
 
 // Format number as VND currency
@@ -86,7 +109,7 @@ function getAllCategories() {
 // Get month range (start date, end date) for filtering
 function getMonthRange(year, month) {
   const start = new Date(year, month - 1, 1);
-  const end = new Date(year, month, 0); // Last day of the month
+  const end = new Date(year, month, 0);
   
   const formatDateString = (d) => {
     const y = d.getFullYear();
@@ -115,4 +138,170 @@ function navigateMonth(year, month, delta) {
   }
   
   return { year: newYear, month: newMonth };
+}
+
+// Mood Analysis
+function analyzeMood(savingsRate, expenseChange) {
+  if (savingsRate >= 30) return {
+    emoji: '🤩', label: 'Tuyệt vời',
+    message: 'Tuyệt vời! Gia đình đang tiết kiệm rất tốt!',
+    level: 'excellent', color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.15)'
+  };
+  if (savingsRate >= 20) return {
+    emoji: '😊', label: 'Tốt',
+    message: 'Tốt lắm! Duy trì thói quen này nhé!',
+    level: 'good', color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.1)'
+  };
+  if (savingsRate >= 10) return {
+    emoji: '😐', label: 'Tạm ổn',
+    message: 'Ổn thôi, cố gắng cắt giảm chi tiêu thêm nhé.',
+    level: 'ok', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)'
+  };
+  if (savingsRate >= 0) return {
+    emoji: '😰', label: 'Cẩn thận',
+    message: 'Cẩn thận! Chi tiêu gần bằng thu nhập rồi đấy.',
+    level: 'warning', color: '#ef4444', bgColor: 'rgba(239, 68, 68, 0.1)'
+  };
+  return {
+    emoji: '🔥', label: 'Báo động',
+    message: 'Báo động! Đang chi nhiều hơn thu, cần điều chỉnh gấp!',
+    level: 'danger', color: '#ef4444', bgColor: 'rgba(239, 68, 68, 0.15)'
+  };
+}
+
+// Smart Tips Generator
+function generateSmartTips(currentTransactions, previousTransactions) {
+  const tips = [];
+  
+  const currExpense = currentTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+  const prevExpense = previousTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+  const currIncome = currentTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+
+  // Positive: Total expense decreased
+  if (prevExpense > 0 && currExpense < prevExpense) {
+    tips.push({
+      emoji: '🎉',
+      text: 'Tháng này bạn đã chi tiêu ít hơn tháng trước. Tuyệt vời!',
+      type: 'positive'
+    });
+  }
+
+  // Info: No income recorded yet
+  if (currIncome === 0) {
+    tips.push({
+      emoji: '💡',
+      text: 'Chưa có khoản thu nhập nào được ghi nhận trong tháng này. Hãy nhớ cập nhật nhé!',
+      type: 'info'
+    });
+  }
+
+  // Warning: Category increased > 30%
+  const currCatTotals = {};
+  currentTransactions.filter(t => t.type === 'expense').forEach(t => {
+    currCatTotals[t.category] = (currCatTotals[t.category] || 0) + t.amount;
+  });
+  
+  const prevCatTotals = {};
+  previousTransactions.filter(t => t.type === 'expense').forEach(t => {
+    prevCatTotals[t.category] = (prevCatTotals[t.category] || 0) + t.amount;
+  });
+
+  for (const catId in currCatTotals) {
+    const prev = prevCatTotals[catId] || 0;
+    const curr = currCatTotals[catId];
+    if (prev > 0) {
+      const inc = ((curr - prev) / prev) * 100;
+      if (inc > 30) {
+        const cat = getCategoryById(catId);
+        tips.push({
+          emoji: '⚠️',
+          text: `Chi tiêu cho ${cat ? cat.label : 'danh mục này'} đã tăng ${Math.round(inc)}% so với tháng trước!`,
+          type: 'warning'
+        });
+      }
+    }
+  }
+
+  // Warning: Large transaction
+  const largeTransactions = currentTransactions.filter(t => t.type === 'expense' && t.amount > currIncome * 0.3 && currIncome > 0);
+  if (largeTransactions.length > 0) {
+    tips.push({
+      emoji: '🚨',
+      text: 'Có khoản chi tiêu rất lớn (hơn 30% thu nhập). Hãy cân nhắc kỹ trước khi chi.',
+      type: 'warning'
+    });
+  }
+
+  // Danger/Warning: Savings status
+  if (currExpense > currIncome && currIncome > 0) {
+    tips.push({
+      emoji: '📉',
+      text: 'Nguy hiểm! Bạn đang tiêu nhiều hơn số tiền kiếm được.',
+      type: 'danger'
+    });
+  } else if (currIncome > 0 && ((currIncome - currExpense)/currIncome) < 0.1) {
+    tips.push({
+      emoji: '🐷',
+      text: 'Bạn đang tiết kiệm được rất ít. Cố gắng giữ lại ít nhất 10% thu nhập nhé.',
+      type: 'warning'
+    });
+  }
+
+  // Info: Fallback if no tips
+  if (tips.length === 0) {
+    tips.push({
+      emoji: '📝',
+      text: 'Ghi chép chi tiêu mỗi ngày giúp bạn quản lý tài chính tốt hơn.',
+      type: 'info'
+    });
+  }
+
+  return tips;
+}
+
+// Loan Calculations
+function calculateLoanStatus(loan) {
+  const { principal, interestRate, termMonths, monthlyPayment, startDate } = loan;
+  
+  const start = new Date(startDate);
+  const now = new Date();
+  
+  let monthsPaid = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+  if (now.getDate() < start.getDate()) {
+    monthsPaid--;
+  }
+  monthsPaid = Math.max(0, monthsPaid);
+  monthsPaid = Math.min(monthsPaid, termMonths); 
+  
+  const monthlyRate = (interestRate / 100) / 12;
+  
+  let currentBalance = principal;
+  let totalInterestPaid = 0;
+  
+  for (let i = 0; i < monthsPaid; i++) {
+    const interest = currentBalance * monthlyRate;
+    const principalPaid = monthlyPayment - interest;
+    totalInterestPaid += interest;
+    currentBalance -= principalPaid;
+    if (currentBalance < 0) currentBalance = 0;
+  }
+  
+  const currentMonthlyInterest = currentBalance * monthlyRate;
+  const currentMonthlyPrincipal = monthlyPayment - currentMonthlyInterest;
+  
+  const estimatedEndDate = new Date(start);
+  estimatedEndDate.setMonth(start.getMonth() + termMonths);
+  
+  const progressPercent = termMonths > 0 ? (monthsPaid / termMonths) * 100 : 100;
+  
+  return {
+    monthsPaid,
+    totalPaid: monthsPaid * monthlyPayment,
+    remainingBalance: Math.max(0, currentBalance),
+    totalInterestPaid,
+    progressPercent: Math.min(100, Math.max(0, progressPercent)),
+    estimatedEndDate,
+    monthlyInterest: Math.max(0, currentMonthlyInterest),
+    monthlyPrincipal: Math.max(0, currentMonthlyPrincipal)
+  };
 }

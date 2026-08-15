@@ -12,6 +12,30 @@
 </head>
 <body>
   <div class="app">
+    <!-- Setup Modal -->
+    <div class="modal-overlay" id="setupModal">
+      <div class="modal setup-modal">
+        <div class="setup-header">
+          <span class="setup-emoji">👨‍👩‍👧‍👦</span>
+          <h2>Chào mừng đến CashFlow!</h2>
+          <p>Hãy thiết lập gia đình của bạn</p>
+        </div>
+        <form id="setupForm">
+          <div class="form-group">
+            <label for="familyName">Tên gia đình</label>
+            <input type="text" id="familyName" placeholder="VD: Gia đình Thức" required>
+          </div>
+          <div class="setup-members" id="setupMembers">
+            <h3>Thành viên</h3>
+            <div class="setup-member-list" id="setupMemberList">
+              <!-- JS renders member inputs here -->
+            </div>
+            <button type="button" class="btn-ghost" id="addSetupMember">+ Thêm thành viên</button>
+          </div>
+          <button type="submit" class="btn-primary btn-submit">🚀 Bắt đầu sử dụng</button>
+        </form>
+      </div>
+    </div>
     <!-- Sidebar (desktop) / Bottom nav (mobile) -->
     <nav class="sidebar" id="sidebar">
       <div class="sidebar-logo">
@@ -26,6 +50,10 @@
         <li class="nav-item" data-page="transactions">
           <span class="nav-icon">📋</span>
           <span class="nav-label">Giao dịch</span>
+        </li>
+        <li class="nav-item" data-page="loans">
+          <span class="nav-icon">💳</span>
+          <span class="nav-label">Khoản vay</span>
         </li>
         <li class="nav-item" data-page="analytics">
           <span class="nav-icon">📈</span>
@@ -68,12 +96,31 @@
       <!-- PAGE 1: Dashboard -->
       <section class="page active" id="page-dashboard">
         <div class="page-header">
-          <h1>Tổng quan</h1>
+          <div class="family-greeting">
+            <h1 id="greetingText">Xin chào, Gia đình! 👋</h1>
+            <div class="family-avatars" id="familyAvatars">
+              <!-- JS renders member avatars -->
+            </div>
+          </div>
           <div class="month-selector">
             <button class="btn-ghost" id="prevMonth">◀</button>
             <span id="currentMonth">Tháng 8, 2026</span>
             <button class="btn-ghost" id="nextMonth">▶</button>
           </div>
+        </div>
+        
+        <!-- Mood Card -->
+        <div class="mood-card" id="moodCard">
+          <div class="mood-emoji" id="moodEmoji">😊</div>
+          <div class="mood-info">
+            <div class="mood-label" id="moodLabel">Tốt</div>
+            <div class="mood-message" id="moodMessage">Tốt lắm! Duy trì nhé!</div>
+          </div>
+        </div>
+
+        <!-- Smart Tips -->
+        <div class="tips-container" id="tipsContainer" style="display:none;">
+          <!-- JS renders tips -->
         </div>
         
         <!-- Summary Cards -->
@@ -215,6 +262,48 @@
           <div class="empty-state" id="emptyTransactions" style="display:none;">
             <span class="empty-icon">📝</span>
             <p>Không có giao dịch nào</p>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- PAGE 5: Loans -->
+      <section class="page" id="page-loans">
+        <div class="page-header">
+          <h1>Khoản vay</h1>
+          <button class="btn-primary" id="addLoanBtn">+ Thêm khoản vay</button>
+        </div>
+        
+        <!-- Loan Summary Cards -->
+        <div class="loan-summary-grid">
+          <div class="summary-card">
+            <div class="card-icon">💰</div>
+            <div class="card-info">
+              <span class="card-label">Tổng dư nợ</span>
+              <span class="card-value" id="totalDebt">0 ₫</span>
+            </div>
+          </div>
+          <div class="summary-card">
+            <div class="card-icon">💸</div>
+            <div class="card-info">
+              <span class="card-label">Trả hàng tháng</span>
+              <span class="card-value" id="monthlyPaymentTotal">0 ₫</span>
+            </div>
+          </div>
+          <div class="summary-card">
+            <div class="card-icon">📊</div>
+            <div class="card-info">
+              <span class="card-label">Lãi đã trả</span>
+              <span class="card-value" id="totalInterestPaid">0 ₫</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Loan List -->
+        <div class="loans-list" id="loansList">
+          <div class="empty-state">
+            <span class="empty-icon">💳</span>
+            <p>Chưa có khoản vay nào</p>
           </div>
         </div>
       </section>
@@ -424,6 +513,15 @@
             <button type="button" class="type-btn income" data-type="income">📥 Thu nhập</button>
           </div>
 
+
+          <!-- Member Selector -->
+          <div class="form-group">
+            <label>Ai chi?</label>
+            <div class="member-selector" id="memberSelector">
+              <!-- JS renders member buttons -->
+            </div>
+          </div>
+
           <!-- Amount -->
           <div class="form-group amount-group">
             <label for="amount">Số tiền (₫)</label>
@@ -452,6 +550,59 @@
 
           <!-- Submit -->
           <button type="submit" class="btn-primary btn-submit" id="submitBtn">Lưu giao dịch</button>
+        </form>
+      </div>
+    </div>
+
+
+    <!-- Loan Modal -->
+    <div class="modal-overlay" id="loanModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 id="loanModalTitle">Thêm khoản vay</h2>
+          <button class="btn-close" id="loanModalClose">✕</button>
+        </div>
+        <form id="loanForm">
+          <input type="hidden" id="editLoanId" value="">
+          <div class="form-group">
+            <label>Loại khoản vay</label>
+            <div class="loan-type-grid" id="loanTypeGrid">
+              <!-- JS renders loan type buttons -->
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="loanName">Tên khoản vay</label>
+            <input type="text" id="loanName" placeholder="VD: Vay mua nhà" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="loanPrincipal">Số tiền vay (₫)</label>
+              <input type="number" id="loanPrincipal" placeholder="0" min="0" required>
+            </div>
+            <div class="form-group">
+              <label for="loanRate">Lãi suất (%/năm)</label>
+              <input type="number" id="loanRate" placeholder="8" min="0" step="0.1" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="loanTerm">Kỳ hạn (tháng)</label>
+              <input type="number" id="loanTerm" placeholder="240" min="1" required>
+            </div>
+            <div class="form-group">
+              <label for="loanMonthly">Trả hàng tháng (₫)</label>
+              <input type="number" id="loanMonthly" placeholder="0" min="0" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="loanStartDate">Ngày bắt đầu</label>
+            <input type="date" id="loanStartDate" required>
+          </div>
+          <div class="form-group">
+            <label for="loanNote">Ghi chú</label>
+            <input type="text" id="loanNote" placeholder="VD: Ngân hàng ABC">
+          </div>
+          <button type="submit" class="btn-primary btn-submit">Lưu khoản vay</button>
         </form>
       </div>
     </div>
