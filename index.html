@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CashFlow - Quản lý chi tiêu</title>
+  <meta name="description" content="Ứng dụng quản lý tài chính cá nhân, theo dõi thu chi chuyên nghiệp">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar (desktop) / Bottom nav (mobile) -->
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <span class="logo-icon">💰</span>
+        <span class="logo-text">CashFlow</span>
+      </div>
+      <ul class="nav-menu">
+        <li class="nav-item active" data-page="dashboard">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Tổng quan</span>
+        </li>
+        <li class="nav-item" data-page="transactions">
+          <span class="nav-icon">📋</span>
+          <span class="nav-label">Giao dịch</span>
+        </li>
+        <li class="nav-item" data-page="analytics">
+          <span class="nav-icon">📈</span>
+          <span class="nav-label">Phân tích</span>
+        </li>
+      </ul>
+      <div class="sidebar-footer">
+        <button class="theme-toggle" id="themeToggle" title="Đổi giao diện">
+          <span class="theme-icon">🌙</span>
+        </button>
+        <button class="btn-export" id="exportBtn" title="Xuất CSV">
+          <span>📥</span>
+          <span class="nav-label">Xuất CSV</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+      <!-- Mobile Controls (theme + export for mobile) -->
+      <div class="mobile-controls" id="mobileControls">
+        <button class="theme-toggle" id="themeToggleMobile" title="Đổi giao diện">
+          <span class="theme-icon">🌙</span>
+        </button>
+        <button class="btn-export" id="exportBtnMobile" title="Xuất CSV">
+          <span>📥</span> Xuất CSV
+        </button>
+      </div>
+      
+      <!-- PAGE 1: Dashboard -->
+      <section class="page active" id="page-dashboard">
+        <div class="page-header">
+          <h1>Tổng quan</h1>
+          <div class="month-selector">
+            <button class="btn-ghost" id="prevMonth">◀</button>
+            <span id="currentMonth">Tháng 8, 2026</span>
+            <button class="btn-ghost" id="nextMonth">▶</button>
+          </div>
+        </div>
+        
+        <!-- Summary Cards -->
+        <div class="summary-grid">
+          <div class="summary-card income-card">
+            <div class="card-icon">📥</div>
+            <div class="card-info">
+              <span class="card-label">Tổng thu</span>
+              <span class="card-value" id="totalIncome">0 ₫</span>
+              <span class="card-change positive" id="incomeChange">+0%</span>
+            </div>
+          </div>
+          <div class="summary-card expense-card">
+            <div class="card-icon">📤</div>
+            <div class="card-info">
+              <span class="card-label">Tổng chi</span>
+              <span class="card-value" id="totalExpense">0 ₫</span>
+              <span class="card-change negative" id="expenseChange">+0%</span>
+            </div>
+          </div>
+          <div class="summary-card balance-card">
+            <div class="card-icon">💎</div>
+            <div class="card-info">
+              <span class="card-label">Số dư</span>
+              <span class="card-value" id="balance">0 ₫</span>
+            </div>
+          </div>
+          <div class="summary-card savings-card">
+            <div class="card-icon">🏦</div>
+            <div class="card-info">
+              <span class="card-label">Tỷ lệ tiết kiệm</span>
+              <span class="card-value" id="savingsRate">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>Chi tiêu theo danh mục</h3>
+            <div class="chart-container">
+              <canvas id="categoryChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>Thu - Chi 6 tháng</h3>
+            <div class="chart-container">
+              <canvas id="monthlyChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cashflow Trend -->
+        <div class="chart-card full-width">
+          <h3>Xu hướng dòng tiền</h3>
+          <div class="chart-container chart-wide">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="chart-card">
+          <div class="card-header">
+            <h3>Giao dịch gần đây</h3>
+            <button class="btn-ghost" data-page="transactions">Xem tất cả →</button>
+          </div>
+          <div id="recentTransactions" class="recent-list">
+            <div class="empty-state">
+              <span class="empty-icon">📝</span>
+              <p>Chưa có giao dịch nào</p>
+              <p class="text-muted">Bấm nút + để thêm giao dịch đầu tiên</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE 2: Transactions -->
+      <section class="page" id="page-transactions">
+        <div class="page-header">
+          <h1>Giao dịch</h1>
+          <button class="btn-primary" id="addTransactionBtn">
+            <span>+</span> Thêm giao dịch
+          </button>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label>Tháng</label>
+            <input type="month" id="filterMonth" class="filter-input">
+          </div>
+          <div class="filter-group">
+            <label>Loại</label>
+            <select id="filterType" class="filter-input">
+              <option value="all">Tất cả</option>
+              <option value="income">Thu</option>
+              <option value="expense">Chi</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Danh mục</label>
+            <select id="filterCategory" class="filter-input">
+              <option value="all">Tất cả</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Sắp xếp</label>
+            <select id="filterSort" class="filter-input">
+              <option value="date-desc">Mới nhất</option>
+              <option value="date-asc">Cũ nhất</option>
+              <option value="amount-desc">Tiền nhiều</option>
+              <option value="amount-asc">Tiền ít</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Transactions Table -->
+        <div class="table-container">
+          <table class="transactions-table" id="transactionsTable">
+            <thead>
+              <tr>
+                <th>Ngày</th>
+                <th>Loại</th>
+                <th>Danh mục</th>
+                <th>Ghi chú</th>
+                <th>Số tiền</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="transactionsBody">
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4"><strong>Tổng cộng</strong></td>
+                <td id="tableTotal" colspan="2"><strong>0 ₫</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+          <div class="empty-state" id="emptyTransactions" style="display:none;">
+            <span class="empty-icon">📝</span>
+            <p>Không có giao dịch nào</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE 3: Analytics -->
+      <section class="page" id="page-analytics">
+        <div class="page-header">
+          <h1>Phân tích</h1>
+          <div class="month-selector">
+            <button class="btn-ghost" id="analyticsPrevMonth">◀</button>
+            <span id="analyticsCurrentMonth">Tháng 8, 2026</span>
+            <button class="btn-ghost" id="analyticsNextMonth">▶</button>
+          </div>
+        </div>
+
+        <!-- Growth Cards -->
+        <div class="analytics-grid">
+          <div class="analytics-card">
+            <h3>Thu nhập</h3>
+            <div class="analytics-value" id="analyticsIncome">0 ₫</div>
+            <div class="analytics-change" id="analyticsIncomeChange">
+              <span class="change-badge">0%</span>
+              <span class="change-label">so với tháng trước</span>
+            </div>
+          </div>
+          <div class="analytics-card">
+            <h3>Chi tiêu</h3>
+            <div class="analytics-value" id="analyticsExpense">0 ₫</div>
+            <div class="analytics-change" id="analyticsExpenseChange">
+              <span class="change-badge">0%</span>
+              <span class="change-label">so với tháng trước</span>
+            </div>
+          </div>
+          <div class="analytics-card">
+            <h3>Tiết kiệm</h3>
+            <div class="analytics-value" id="analyticsSavings">0 ₫</div>
+            <div class="analytics-change" id="analyticsSavingsChange">
+              <span class="change-badge">0%</span>
+              <span class="change-label">so với tháng trước</span>
+            </div>
+          </div>
+          <div class="analytics-card">
+            <h3>Tỷ lệ tiết kiệm</h3>
+            <div class="analytics-value" id="analyticsSavingsRate">0%</div>
+            <div class="analytics-change" id="analyticsSavingsRateChange">
+              <span class="change-badge">0%</span>
+              <span class="change-label">so với tháng trước</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Categories -->
+        <div class="chart-card">
+          <h3>Top danh mục chi tiêu</h3>
+          <div id="topCategories" class="top-categories-list">
+            <div class="empty-state">
+              <span class="empty-icon">📊</span>
+              <p>Chưa có dữ liệu</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category Trend Chart -->
+        <div class="chart-card full-width">
+          <h3>Xu hướng chi tiêu theo danh mục</h3>
+          <div class="chart-container chart-wide">
+            <canvas id="categoryTrendChart"></canvas>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- FAB (Floating Action Button) -->
+    <button class="fab" id="fabAdd" title="Thêm giao dịch">
+      <span>+</span>
+    </button>
+
+    <!-- Transaction Modal -->
+    <div class="modal-overlay" id="transactionModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 id="modalTitle">Thêm giao dịch</h2>
+          <button class="btn-close" id="modalClose">✕</button>
+        </div>
+        <form id="transactionForm" class="transaction-form">
+          <input type="hidden" id="editId" value="">
+          
+          <!-- Type Toggle -->
+          <div class="type-toggle">
+            <button type="button" class="type-btn expense active" data-type="expense">📤 Chi tiêu</button>
+            <button type="button" class="type-btn income" data-type="income">📥 Thu nhập</button>
+          </div>
+
+          <!-- Amount -->
+          <div class="form-group amount-group">
+            <label for="amount">Số tiền (₫)</label>
+            <input type="number" id="amount" placeholder="0" min="0" required autocomplete="off">
+          </div>
+
+          <!-- Category -->
+          <div class="form-group">
+            <label>Danh mục</label>
+            <div class="category-grid" id="categoryGrid">
+              <!-- Categories will be rendered by JS -->
+            </div>
+          </div>
+
+          <!-- Note -->
+          <div class="form-group">
+            <label for="note">Ghi chú</label>
+            <input type="text" id="note" placeholder="VD: Cà phê sáng" autocomplete="off">
+          </div>
+
+          <!-- Date -->
+          <div class="form-group">
+            <label for="date">Ngày</label>
+            <input type="date" id="date" required>
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" class="btn-primary btn-submit" id="submitBtn">Lưu giao dịch</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/utils.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
