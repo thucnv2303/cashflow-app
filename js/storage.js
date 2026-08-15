@@ -111,20 +111,43 @@ const Storage = {
   async _sheetApiCall(action, params = {}) {
     const url = this.getApiUrl();
     if (!url) throw new Error("Chưa cấu hình API URL");
+    
+    // For actions sending data, try POST first with plain text body (avoids CORS preflight)
+    const payload = { action, ...params };
+    const payloadStr = JSON.stringify(payload);
+    
     let fetchUrl = `${url}?action=${action}`;
     for (const key in params) {
       fetchUrl += `&${key}=${encodeURIComponent(typeof params[key] === 'object' ? JSON.stringify(params[key]) : params[key])}`;
     }
-    
-    // Thử fetch trước, nếu CORS lỗi → fallback JSONP
+
     try {
+      if (['syncMembers', 'syncLoans', 'sync', 'add', 'update'].includes(action)) {
+        try {
+          const controller = new AbortController();
+          const to = setTimeout(() => controller.abort(), 12000);
+          const res = await fetch(url, {
+            method: 'POST',
+            body: payloadStr,
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            signal: controller.signal
+          });
+          clearTimeout(to);
+          const text = await res.text();
+          try { 
+            const parsed = JSON.parse(text);
+            if (parsed && (parsed.success || parsed.status === 'ok')) return parsed;
+          } catch(e) {}
+        } catch(postErr) {
+          console.warn('POST failed, fallback to GET/JSONP:', postErr);
+        }
+      }
       return await this._fetchWithTimeout(fetchUrl, 15000);
     } catch (fetchError) {
       console.warn('Fetch failed, trying JSONP fallback:', fetchError.message);
       try {
         return await this._jsonpCall(fetchUrl, 15000);
       } catch (jsonpError) {
-        // Cả 2 đều lỗi → báo chi tiết
         throw new Error('Không thể kết nối. Kiểm tra: (1) URL đúng format .../exec, (2) Deploy → Execute as: Me, Who has access: Anyone, (3) Đã chạy setupSheet() và cấp quyền');
       }
     }
@@ -420,16 +443,27 @@ const Storage = {
     if (!this.isOnline()) return false;
     try {
       const data = await this.fetchFromSheets();
-      this.saveLocal(data);
+      if (Array.isArray(data)) this.saveLocal(data);
       
       try {
         const membersData = await this.fetchMembersFromSheets();
-        this.saveMembers(membersData);
+        if (Array.isArray(membersData) && membersData.length > 0) {
+          const localMembers = this.getMembers();
+          // Smart merge: never wipe out a member's valid avatarImg if the incoming sync is blank
+          const merged = membersData.map(inc => {
+            const local = localMembers.find(l => l.id === inc.id);
+            if (local && local.avatarImg && (!inc.avatarImg || inc.avatarImg === '')) {
+              return { ...inc, avatarImg: local.avatarImg, avatarId: local.avatarId };
+            }
+            return inc;
+          });
+          this.saveMembers(merged);
+        }
       } catch (e) { console.warn('Sync members failed:', e); }
 
       try {
         const loansData = await this.fetchLoansFromSheets();
-        this.saveLoans(loansData);
+        if (Array.isArray(loansData)) this.saveLoans(loansData);
       } catch (e) { console.warn('Sync loans failed:', e); }
 
       return true;

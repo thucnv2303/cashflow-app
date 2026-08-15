@@ -2634,6 +2634,7 @@ html[data-theme='light'] .btn-ghost:hover {
 
 html[data-theme='light'] .type-btn,
 html[data-theme='light'] .member-btn,
+html[data-theme='light'] .beneficiary-btn,
 html[data-theme='light'] .category-item {
   background: #fff;
   border: 1px solid rgba(194, 152, 108, 0.18);
@@ -2641,13 +2642,21 @@ html[data-theme='light'] .category-item {
 
 html[data-theme='light'] .type-btn:hover,
 html[data-theme='light'] .member-btn:hover,
+html[data-theme='light'] .beneficiary-btn:hover,
 html[data-theme='light'] .category-item:hover {
   background: #fff0de;
 }
 
-html[data-theme='light'] .type-btn.active {
-  border-color: var(--primary);
-  background: rgba(231, 125, 62, 0.08);
+html[data-theme='light'] .type-btn.active.expense {
+  background: var(--expense) !important;
+  color: #fff !important;
+  border-color: var(--expense) !important;
+}
+
+html[data-theme='light'] .type-btn.active.income {
+  background: var(--income) !important;
+  color: #fff !important;
+  border-color: var(--income) !important;
 }
 
 html[data-theme='light'] .fab {
@@ -2714,4 +2723,267 @@ html[data-theme='light'] .toast {
   border: 1px solid rgba(194, 152, 108, 0.15);
   box-shadow: 0 4px 20px rgba(120, 80, 40, 0.1);
   color: #3d2415;
+}
+
+/* ==================== V2.4 NEW FEATURES ==================== */
+
+/* 1. Header Right Controls & Scope Toggle */
+.header-right-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.scope-toggle {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.scope-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.scope-btn:hover {
+  color: var(--text-primary);
+}
+
+.scope-btn.active {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 2px 8px var(--primary-glow);
+}
+
+/* 2. Clickable KPI Cards */
+.clickable-kpi {
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.clickable-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  border-color: var(--primary);
+}
+
+.clickable-kpi:active {
+  transform: scale(0.98);
+}
+
+.kpi-hint {
+  font-size: 0.68rem;
+  opacity: 0.6;
+  margin-left: 3px;
+  vertical-align: middle;
+}
+
+/* 3. Setup Guide Accordion */
+.guide-accordion {
+  cursor: pointer;
+}
+
+.guide-accordion summary {
+  list-style: none;
+}
+
+.guide-accordion summary::-webkit-details-marker {
+  display: none;
+}
+
+.guide-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+
+.guide-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.guide-icon {
+  font-size: 1.5rem;
+}
+
+.accordion-arrow {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  transition: transform 0.3s ease;
+}
+
+.guide-accordion[open] .accordion-arrow {
+  transform: rotate(180deg);
+}
+
+/* 4. Beneficiary Selector */
+.beneficiary-selector {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.beneficiary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.beneficiary-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.beneficiary-btn.active {
+  border-color: var(--primary);
+  background: var(--primary-glow);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* 5. KPI Drilldown Modal */
+.kpi-drilldown-modal {
+  max-width: 520px;
+  width: 100%;
+}
+
+.kpi-drilldown-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.kpi-total-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.kpi-total-val {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.kpi-drilldown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 52vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+}
+
+.kpi-drilldown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  gap: 10px;
+  transition: background 0.2s;
+}
+
+.kpi-drilldown-item:hover {
+  background: var(--surface-hover);
+}
+
+.kpi-item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.kpi-item-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  background: rgba(231, 125, 62, 0.1);
+  flex-shrink: 0;
+}
+
+.kpi-item-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kpi-item-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kpi-item-sub {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.kpi-item-badge {
+  padding: 1px 5px;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  background: rgba(0,0,0,0.06);
+  white-space: nowrap;
+}
+
+.kpi-item-amount {
+  font-size: 0.92rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.kpi-item-amount.income { color: var(--income); }
+.kpi-item-amount.expense { color: var(--expense); }
+
+.kpi-empty-state {
+  text-align: center;
+  padding: 30px 10px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
 }

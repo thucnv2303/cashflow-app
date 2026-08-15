@@ -9,9 +9,9 @@ function setupSheet() {
   let sheet = ss.getSheetByName('Transactions');
   if (!sheet) {
     sheet = ss.insertSheet('Transactions');
-    sheet.appendRow(['ID','Loại','Số tiền','Danh mục','Ghi chú','Ngày','Thành viên','Ngày tạo']);
+    sheet.appendRow(['ID','Loại','Số tiền','Danh mục','Ghi chú','Ngày','Thành viên','Ngày tạo','Chi cho ai']);
     sheet.setFrozenRows(1);
-    sheet.getRange('A1:H1').setFontWeight('bold');
+    sheet.getRange('A1:I1').setFontWeight('bold');
   }
   let loanSheet = ss.getSheetByName('Loans');
   if (!loanSheet) {
@@ -39,7 +39,19 @@ function responseJson(data, callback){
   }
   return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);
 }
+function doPost(e) {
+  if (e && e.postData && e.postData.contents) {
+    try {
+      var body = JSON.parse(e.postData.contents);
+      e.parameter = e.parameter || {};
+      for (var k in body) { e.parameter[k] = body[k]; }
+    } catch(err) {}
+  }
+  return doGet(e);
+}
 function doGet(e) {
+  e = e || {};
+  e.parameter = e.parameter || {};
   var action = e.parameter.action || 'getAll';
   var cb = e.parameter.callback || null;
   if (action==='ping') return responseJson({status:'ok',message:'Kết nối thành công!'}, cb);
@@ -49,13 +61,13 @@ function doGet(e) {
     if (action==='getAll') {
       var sheet=getSheet('Transactions');if(!sheet)return responseJson({success:true,data:[]}, cb);
       var d=sheet.getDataRange().getValues(),r=[];
-      for(var i=1;i<d.length;i++){if(d[i][0])r.push({id:d[i][0],type:d[i][1],amount:Number(d[i][2]),category:d[i][3],note:d[i][4],date:d[i][5],memberId:d[i][6],createdAt:d[i][7]});}
+      for(var i=1;i<d.length;i++){if(d[i][0])r.push({id:String(d[i][0]),type:String(d[i][1]||'expense'),amount:Number(d[i][2]||0),category:String(d[i][3]||'other'),note:String(d[i][4]||''),date:String(d[i][5]||''),memberId:String(d[i][6]||''),createdAt:String(d[i][7]||''),beneficiaryId:String(d[i][8]||'')});}
       return responseJson({success:true,data:r}, cb);
     }
-    if (action==='add'){var o=JSON.parse(e.parameter.data);getSheet('Transactions').appendRow([o.id||'',o.type||'',o.amount||0,o.category||'',o.note||'',o.date||'',o.memberId||'',o.createdAt||'']);return responseJson({success:true}, cb);}
-    if (action==='update'){var id=e.parameter.id,o=JSON.parse(e.parameter.data),s=getSheet('Transactions'),r=findRow(s,id);if(r>-1){s.getRange(r,1,1,8).setValues([[o.id||id,o.type||'',o.amount||0,o.category||'',o.note||'',o.date||'',o.memberId||'',o.createdAt||'']]);return responseJson({success:true}, cb);}throw new Error('Not found');}
+    if (action==='add'){var o=JSON.parse(e.parameter.data);getSheet('Transactions').appendRow([o.id||'',o.type||'',o.amount||0,o.category||'',o.note||'',o.date||'',o.memberId||'',o.createdAt||'',o.beneficiaryId||'']);return responseJson({success:true}, cb);}
+    if (action==='update'){var id=e.parameter.id,o=JSON.parse(e.parameter.data),s=getSheet('Transactions'),r=findRow(s,id);if(r>-1){s.getRange(r,1,1,9).setValues([[o.id||id,o.type||'',o.amount||0,o.category||'',o.note||'',o.date||'',o.memberId||'',o.createdAt||'',o.beneficiaryId||'']]);return responseJson({success:true}, cb);}throw new Error('Not found');}
     if (action==='delete'){var s=getSheet('Transactions'),r=findRow(s,e.parameter.id);if(r>-1){s.deleteRow(r);return responseJson({success:true}, cb);}throw new Error('Not found');}
-    if (action==='sync'){var ts=JSON.parse(e.parameter.data),s=getSheet('Transactions'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(ts&&ts.length>0){var rows=ts.map(function(t){return[t.id||'',t.type||'',t.amount||0,t.category||'',t.note||'',t.date||'',t.memberId||'',t.createdAt||''];});s.getRange(2,1,rows.length,8).setValues(rows);}return responseJson({success:true}, cb);}
+    if (action==='sync'){var ts=JSON.parse(e.parameter.data),s=getSheet('Transactions'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(ts&&ts.length>0){var rows=ts.map(function(t){return[t.id||'',t.type||'',t.amount||0,t.category||'',t.note||'',t.date||'',t.memberId||'',t.createdAt||'',t.beneficiaryId||''];});s.getRange(2,1,rows.length,9).setValues(rows);}return responseJson({success:true}, cb);}
     if (action==='getLoans'){var s=getSheet('Loans');if(!s)return responseJson({success:true,data:[]}, cb);var d=s.getDataRange().getValues(),r=[];for(var i=1;i<d.length;i++){if(d[i][0])r.push({id:d[i][0],name:d[i][1],emoji:d[i][2],loanType:d[i][3],principal:Number(d[i][4]),interestRate:Number(d[i][5]),termMonths:Number(d[i][6]),monthlyPayment:Number(d[i][7]),startDate:d[i][8],note:d[i][9],createdAt:d[i][10]});}return responseJson({success:true,data:r}, cb);}
     if (action==='syncLoans'){var ls=JSON.parse(e.parameter.data),s=getSheet('Loans'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(ls&&ls.length>0){var rows=ls.map(function(l){return[l.id||'',l.name||'',l.emoji||'',l.loanType||'',l.principal||0,l.interestRate||0,l.termMonths||0,l.monthlyPayment||0,l.startDate||'',l.note||'',l.createdAt||''];});s.getRange(2,1,rows.length,11).setValues(rows);}return responseJson({success:true}, cb);}
     if (action==='getMembers'){var s=getSheet('Members');if(!s)return responseJson({success:true,data:[]}, cb);var d=s.getDataRange().getValues(),r=[];for(var i=1;i<d.length;i++){if(d[i][0])r.push({id:String(d[i][0]),name:String(d[i][1]||''),avatar:String(d[i][2]||'👤'),color:String(d[i][3]||'#e77d3e'),avatarImg:String(d[i][4]||''),avatarId:String(d[i][5]||'')});}return responseJson({success:true,data:r}, cb);}
@@ -69,11 +81,13 @@ const App = {
   currentPage: 'dashboard',
   currentMonth: getCurrentMonth(),
   analyticsMonth: getCurrentMonth(),
+  dashboardScope: 'all',
   editingId: null,
   editingLoanId: null,
   selectedType: 'expense',
   selectedCategory: null,
   selectedMemberId: null,
+  selectedBeneficiaryId: 'family',
   selectedLoanType: null,
 
   // ==================== INIT ====================
@@ -276,9 +290,23 @@ const App = {
   // ==================== DASHBOARD ====================
   renderDashboard() {
     const { year, month } = this.currentMonth;
-    const transactions = Storage.getByMonth(year, month);
+    let transactions = Storage.getByMonth(year, month);
     const prev = navigateMonth(year, month, -1);
-    const prevTransactions = Storage.getByMonth(prev.year, prev.month);
+    let prevTransactions = Storage.getByMonth(prev.year, prev.month);
+
+    // Apply dashboard scope filter (all | family | personal)
+    if (this.dashboardScope === 'family') {
+      transactions = transactions.filter(t => !t.beneficiaryId || t.beneficiaryId === 'family');
+      prevTransactions = prevTransactions.filter(t => !t.beneficiaryId || t.beneficiaryId === 'family');
+    } else if (this.dashboardScope === 'personal') {
+      transactions = transactions.filter(t => t.beneficiaryId && t.beneficiaryId !== 'family');
+      prevTransactions = prevTransactions.filter(t => t.beneficiaryId && t.beneficiaryId !== 'family');
+    }
+
+    // Update scope buttons active status
+    document.querySelectorAll('.scope-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.scope === this.dashboardScope);
+    });
 
     let income = 0, expense = 0;
     transactions.forEach(t => { if (t.type === 'income') income += t.amount; else expense += t.amount; });
@@ -932,31 +960,39 @@ const App = {
     this.editingId = editId;
     const modal = document.getElementById('transactionModal'); if(!modal) return;
     const form = document.getElementById('transactionForm'); if(form) form.reset();
-    this.renderMemberSelector();
 
     if (editId) {
       document.getElementById('modalTitle').textContent = 'Sửa giao dịch';
       document.getElementById('editId').value = editId;
       const t = Storage.getLocal().find(x => x.id === editId);
       if (t) {
-        this.selectedType = t.type; this.selectedCategory = t.category; this.selectedMemberId = t.memberId || null;
-        document.getElementById('amount').value = t.amount;
+        this.selectedType = t.type;
+        this.selectedCategory = t.category;
+        this.selectedMemberId = t.memberId || null;
+        this.selectedBeneficiaryId = t.beneficiaryId || 'family';
+        document.getElementById('amount').value = formatNumberInput(t.amount);
         document.getElementById('date').value = t.date;
         document.getElementById('note').value = t.note || '';
-        document.querySelectorAll('.type-btn').forEach(b => { b.classList.remove('active'); if(b.dataset.type===t.type) b.classList.add('active'); });
-        this.renderMemberSelector();
+        document.querySelectorAll('.type-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.type === t.type);
+        });
       }
     } else {
       document.getElementById('modalTitle').textContent = 'Thêm giao dịch';
       document.getElementById('editId').value = '';
-      this.selectedType = 'expense'; this.selectedCategory = null;
-      // Auto-select first member
+      this.selectedType = 'expense';
+      this.selectedCategory = null;
       const members = Storage.getMembers();
       this.selectedMemberId = members.length > 0 ? members[0].id : null;
+      this.selectedBeneficiaryId = 'family';
+      document.getElementById('amount').value = '';
       document.getElementById('date').value = new Date().toISOString().split('T')[0];
-      document.querySelectorAll('.type-btn').forEach(b => { b.classList.remove('active'); if(b.dataset.type==='expense') b.classList.add('active'); });
-      this.renderMemberSelector();
+      document.querySelectorAll('.type-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.type === 'expense');
+      });
     }
+    this.renderMemberSelector();
+    this.renderBeneficiarySelector();
     this.renderCategories();
     modal.classList.add('active');
     setTimeout(() => document.getElementById('amount')?.focus(), 100);
@@ -975,6 +1011,28 @@ const App = {
     }).join('');
   },
 
+  renderBeneficiarySelector() {
+    const c = document.getElementById('beneficiarySelector'); if(!c) return;
+    const members = Storage.getMembers();
+    const isFamily = !this.selectedBeneficiaryId || this.selectedBeneficiaryId === 'family';
+    let html = `
+      <button type="button" class="beneficiary-btn ${isFamily ? 'active' : ''}" data-id="family">
+        <span>👨‍👩‍👧‍👦 Cả nhà</span>
+      </button>
+    `;
+    html += members.map(m => {
+      const imgSrc = m.avatarImg || (AVATARS.find(a => a.id === m.avatarId) || AVATARS[0]).img;
+      const isActive = this.selectedBeneficiaryId === m.id;
+      return `
+        <button type="button" class="beneficiary-btn ${isActive ? 'active' : ''}" data-id="${m.id}" style="--member-color:${m.color}">
+          <img src="${imgSrc}" alt="${m.name}" class="avatar-img-sm" style="width:16px;height:16px;border-radius:50%;">
+          <span>${m.name}</span>
+        </button>
+      `;
+    }).join('');
+    c.innerHTML = html;
+  },
+
   closeModal() {
     document.getElementById('transactionModal')?.classList.remove('active');
     this.editingId = null;
@@ -982,13 +1040,23 @@ const App = {
 
   handleSubmit(e) {
     e.preventDefault();
-    const amount = parseFloat(document.getElementById('amount').value);
+    const rawAmount = document.getElementById('amount').value;
+    const amount = parseNumberInput(rawAmount);
     const date = document.getElementById('date').value;
     const note = document.getElementById('note').value;
     if (!amount || amount <= 0) { this.showToast('Nhập số tiền hợp lệ','error'); return; }
     if (!this.selectedCategory) { this.showToast('Chọn danh mục','error'); return; }
     if (!date) { this.showToast('Chọn ngày','error'); return; }
-    const data = { type: this.selectedType, amount, category: this.selectedCategory, date, note, memberId: this.selectedMemberId };
+    const beneficiaryId = this.selectedBeneficiaryId || 'family';
+    const data = {
+      type: this.selectedType,
+      amount,
+      category: this.selectedCategory,
+      date,
+      note,
+      memberId: this.selectedMemberId,
+      beneficiaryId
+    };
     if (this.editingId) { Storage.update(this.editingId, data); this.showToast('Đã cập nhật ✅'); }
     else { Storage.add(data); this.showToast('Đã thêm giao dịch ✅'); }
     this.closeModal(); this.renderCurrentPage();
@@ -1014,6 +1082,93 @@ const App = {
     ).join('');
   },
 
+  // ==================== KPI DRILLDOWN MODAL ====================
+  openKPIModal(type) {
+    const { year, month } = this.currentMonth;
+    let transactions = Storage.getByMonth(year, month);
+    if (this.dashboardScope === 'family') {
+      transactions = transactions.filter(t => !t.beneficiaryId || t.beneficiaryId === 'family');
+    } else if (this.dashboardScope === 'personal') {
+      transactions = transactions.filter(t => t.beneficiaryId && t.beneficiaryId !== 'family');
+    }
+
+    const modal = document.getElementById('kpiDrilldownModal');
+    const titleEl = document.getElementById('kpiDrilldownTitle');
+    const subEl = document.getElementById('kpiDrilldownSubtitle');
+    const totalValEl = document.getElementById('kpiTotalVal');
+    const listEl = document.getElementById('kpiDrilldownList');
+    if (!modal || !listEl) return;
+
+    let items = [];
+    let total = 0;
+    let title = '';
+    let subtitle = `Tháng ${month}/${year}`;
+    if (this.dashboardScope === 'family') subtitle += ' · 👨‍👩‍👧‍👦 Chi tiêu chung';
+    else if (this.dashboardScope === 'personal') subtitle += ' · 👤 Chi tiêu riêng';
+
+    if (type === 'income') {
+      title = '📥 Chi tiết Thu nhập';
+      items = transactions.filter(t => t.type === 'income');
+      total = items.reduce((s, t) => s + t.amount, 0);
+    } else if (type === 'expense') {
+      title = '📤 Chi tiết Chi tiêu';
+      items = transactions.filter(t => t.type === 'expense');
+      total = items.reduce((s, t) => s + t.amount, 0);
+    } else if (type === 'balance') {
+      title = '💎 Chi tiết Số dư';
+      items = transactions;
+      const inc = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+      const exp = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+      total = inc - exp;
+    } else if (type === 'savings') {
+      title = '🎯 Tỷ lệ tiết kiệm';
+      items = transactions.filter(t => t.type === 'expense');
+      total = items.reduce((s, t) => s + t.amount, 0);
+    }
+
+    titleEl.textContent = title;
+    subEl.textContent = subtitle;
+    totalValEl.textContent = formatCurrency(total);
+    totalValEl.className = 'kpi-total-val ' + (type === 'income' ? 'income' : (type === 'expense' ? 'expense' : ''));
+
+    if (items.length === 0) {
+      listEl.innerHTML = '<div class="kpi-empty-state">Chưa có giao dịch nào trong mục này 🍃</div>';
+    } else {
+      listEl.innerHTML = items.map(t => {
+        const cat = getCategoryById(t.category);
+        const payer = t.memberId ? Storage.getMemberById(t.memberId) : null;
+        const bene = t.beneficiaryId && t.beneficiaryId !== 'family' ? Storage.getMemberById(t.beneficiaryId) : null;
+        const isInc = t.type === 'income';
+        
+        const payerImg = payer ? (payer.avatarImg || (AVATARS.find(a => a.id === payer.avatarId) || AVATARS[0]).img) : '';
+        const beneBadge = bene ? `👤 Cho ${bene.name}` : '👨‍👩‍👧‍👦 Cả nhà';
+
+        return `
+          <div class="kpi-drilldown-item">
+            <div class="kpi-item-left">
+              <div class="kpi-item-icon">${cat ? cat.emoji : '📦'}</div>
+              <div class="kpi-item-info">
+                <div class="kpi-item-title">${cat ? cat.label : 'Khác'}${t.note ? ' · ' + t.note : ''}</div>
+                <div class="kpi-item-sub">
+                  <span>${formatDate(t.date)}</span>
+                  ${payer ? `<span class="kpi-item-badge"><img src="${payerImg}" style="width:12px;height:12px;border-radius:50%;vertical-align:middle;"> ${payer.name}</span>` : ''}
+                  <span class="kpi-item-badge">${beneBadge}</span>
+                </div>
+              </div>
+            </div>
+            <div class="kpi-item-amount ${isInc ? 'income' : 'expense'}">${isInc ? '+' : '-'}${formatCurrency(t.amount)}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    modal.classList.add('active');
+  },
+
+  closeKPIModal() {
+    document.getElementById('kpiDrilldownModal')?.classList.remove('active');
+  },
+
   // ==================== LOAN MODAL ====================
   openLoanModal(editId = null) {
     this.editingLoanId = editId;
@@ -1028,10 +1183,10 @@ const App = {
       if (l) {
         this.selectedLoanType = l.loanType;
         document.getElementById('loanName').value = l.name;
-        document.getElementById('loanPrincipal').value = l.principal;
+        document.getElementById('loanPrincipal').value = formatNumberInput(l.principal);
         document.getElementById('loanRate').value = l.interestRate;
         document.getElementById('loanTerm').value = l.termMonths;
-        document.getElementById('loanMonthly').value = l.monthlyPayment;
+        document.getElementById('loanMonthly').value = formatNumberInput(l.monthlyPayment);
         document.getElementById('loanStartDate').value = l.startDate;
         document.getElementById('loanNote').value = l.note || '';
         this.renderLoanTypes();
@@ -1063,10 +1218,10 @@ const App = {
       name: document.getElementById('loanName').value,
       loanType: this.selectedLoanType,
       emoji: LOAN_TYPES.find(t => t.id === this.selectedLoanType)?.emoji || '💳',
-      principal: parseFloat(document.getElementById('loanPrincipal').value),
+      principal: parseNumberInput(document.getElementById('loanPrincipal').value),
       interestRate: parseFloat(document.getElementById('loanRate').value),
       termMonths: parseInt(document.getElementById('loanTerm').value),
-      monthlyPayment: parseFloat(document.getElementById('loanMonthly').value),
+      monthlyPayment: parseNumberInput(document.getElementById('loanMonthly').value),
       startDate: document.getElementById('loanStartDate').value,
       note: document.getElementById('loanNote').value
     };
@@ -1102,12 +1257,15 @@ const App = {
   renderTransactionRow(t) {
     const cat = getCategoryById(t.category);
     const member = t.memberId ? Storage.getMemberById(t.memberId) : null;
+    const bene = t.beneficiaryId && t.beneficiaryId !== 'family' ? Storage.getMemberById(t.beneficiaryId) : null;
     const memberBadge = member ? `<span class="family-avatar" style="border-color:${member.color};width:28px;height:28px;display:inline-flex"><img src="${member.avatarImg || (AVATARS.find(a => a.id === member.avatarId) || AVATARS[0]).img}" alt="${member.name}" class="avatar-img"></span>` : '';
+    const beneTag = bene ? `<span style="font-size:0.7rem;color:var(--text-secondary);margin-left:4px;">(Cho ${bene.name})</span>` : '';
+
     return `<tr>
       <td>${formatDate(t.date)}</td>
       <td>${memberBadge}</td>
       <td><span class="badge">${t.type==='income'?'Thu':'Chi'}</span></td>
-      <td>${cat?cat.emoji+' '+cat.label:'📦 Khác'}</td>
+      <td>${cat?cat.emoji+' '+cat.label:'📦 Khác'} ${beneTag}</td>
       <td>${t.note||'—'}</td>
       <td class="amount-col ${t.type==='income'?'income':'expense'}">${t.type==='income'?'+':'-'}${formatCurrency(t.amount)}</td>
       <td><div class="action-btns"><button class="edit-btn" data-id="${t.id}">✏️</button><button class="delete-btn" data-id="${t.id}">🗑️</button></div></td>
@@ -1117,11 +1275,14 @@ const App = {
   renderRecentItem(t) {
     const cat = getCategoryById(t.category);
     const member = t.memberId ? Storage.getMemberById(t.memberId) : null;
+    const bene = t.beneficiaryId && t.beneficiaryId !== 'family' ? Storage.getMemberById(t.beneficiaryId) : null;
     const isInc = t.type === 'income';
+    const beneText = bene ? ` · Cho ${bene.name}` : '';
+
     return `<div class="recent-item">
       <div class="recent-icon">${cat?cat.emoji:'📦'}</div>
       <div class="recent-info">
-        <div class="recent-title">${member?`<img src="${member.avatarImg || (AVATARS.find(a => a.id === member.avatarId) || AVATARS[0]).img}" class="avatar-img-sm"> `:''} ${cat?cat.label:'Khác'}${t.note?' · '+t.note:''}</div>
+        <div class="recent-title">${member?`<img src="${member.avatarImg || (AVATARS.find(a => a.id === member.avatarId) || AVATARS[0]).img}" class="avatar-img-sm"> `:''} ${cat?cat.label:'Khác'}${beneText}${t.note?' · '+t.note:''}</div>
         <div class="recent-date">${formatDate(t.date)}</div>
       </div>
       <div class="recent-amount ${isInc?'income':'expense'}">${isInc?'+':'-'}${formatCurrency(t.amount)}</div>
@@ -1132,12 +1293,44 @@ const App = {
   bindEvents() {
     // Nav
     document.addEventListener('click', (e) => { const n=e.target.closest('[data-page]'); if(n){e.preventDefault();this.navigate(n.dataset.page);} });
+    
+    // Dashboard scope filter
+    document.getElementById('dashboardScopeToggle')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('.scope-btn');
+      if (btn) {
+        this.dashboardScope = btn.dataset.scope;
+        this.renderDashboard();
+      }
+    });
+
+    // KPI Drilldown Cards click
+    document.getElementById('kpiIncomeCard')?.addEventListener('click', () => this.openKPIModal('income'));
+    document.getElementById('kpiExpenseCard')?.addEventListener('click', () => this.openKPIModal('expense'));
+    document.getElementById('kpiBalanceCard')?.addEventListener('click', () => this.openKPIModal('balance'));
+    document.getElementById('kpiSavingsCard')?.addEventListener('click', () => this.openKPIModal('savings'));
+    document.getElementById('kpiDrilldownClose')?.addEventListener('click', () => this.closeKPIModal());
+    document.getElementById('kpiDrilldownModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'kpiDrilldownModal') this.closeKPIModal();
+    });
+
     // Dashboard month nav
     document.getElementById('prevMonth')?.addEventListener('click', () => { this.currentMonth=navigateMonth(this.currentMonth.year,this.currentMonth.month,-1); this.renderDashboard(); });
     document.getElementById('nextMonth')?.addEventListener('click', () => { this.currentMonth=navigateMonth(this.currentMonth.year,this.currentMonth.month,1); this.renderDashboard(); });
+    
     // Analytics month nav
     document.getElementById('analyticsPrevMonth')?.addEventListener('click', () => { this.analyticsMonth=navigateMonth(this.analyticsMonth.year,this.analyticsMonth.month,-1); this.renderAnalytics(); });
     document.getElementById('analyticsNextMonth')?.addEventListener('click', () => { this.analyticsMonth=navigateMonth(this.analyticsMonth.year,this.analyticsMonth.month,1); this.renderAnalytics(); });
+    
+    // Currency inputs auto-formatter (e.g. 5000 -> 5.000)
+    ['amount', 'loanPrincipal', 'loanMonthly'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', (e) => {
+          e.target.value = formatNumberInput(e.target.value);
+        });
+      }
+    });
+
     // Transaction modal
     document.getElementById('addTransactionBtn')?.addEventListener('click', (e) => { e.stopPropagation(); this.openModal(); });
     document.getElementById('fabAdd')?.addEventListener('click', () => this.openModal());
@@ -1146,36 +1339,50 @@ const App = {
     document.getElementById('transactionForm')?.addEventListener('submit', (e) => this.handleSubmit(e));
     document.querySelectorAll('.type-btn').forEach(b => b.addEventListener('click', (e) => { e.preventDefault(); this.selectType(e.currentTarget.dataset.type); }));
     document.getElementById('categoryGrid')?.addEventListener('click', (e) => { const b=e.target.closest('.category-btn'); if(b) this.selectCategory(b.dataset.id); });
-    // Member selector in form
+    
+    // Member selector in form (Ai chi?)
     document.getElementById('memberSelector')?.addEventListener('click', (e) => {
       const b = e.target.closest('.member-btn');
       if (b) { this.selectedMemberId = b.dataset.id; this.renderMemberSelector(); }
     });
+
+    // Beneficiary selector in form (Chi cho ai?)
+    document.getElementById('beneficiarySelector')?.addEventListener('click', (e) => {
+      const b = e.target.closest('.beneficiary-btn');
+      if (b) { this.selectedBeneficiaryId = b.dataset.id; this.renderBeneficiarySelector(); }
+    });
+
     // Loan modal
     document.getElementById('addLoanBtn')?.addEventListener('click', () => this.openLoanModal());
     document.getElementById('loanModalClose')?.addEventListener('click', () => this.closeLoanModal());
     document.getElementById('loanModal')?.addEventListener('click', (e) => { if(e.target.id==='loanModal') this.closeLoanModal(); });
     document.getElementById('loanForm')?.addEventListener('submit', (e) => this.handleLoanSubmit(e));
     document.getElementById('loanTypeGrid')?.addEventListener('click', (e) => { const b=e.target.closest('.loan-type-btn'); if(b){this.selectedLoanType=b.dataset.id;this.renderLoanTypes();} });
+    
     // Loan list edit/delete
     document.getElementById('loansList')?.addEventListener('click', (e) => {
       const eb=e.target.closest('.edit-loan-btn'); const db=e.target.closest('.delete-loan-btn');
       if(eb) this.openLoanModal(eb.dataset.id);
       if(db) this.deleteLoan(db.dataset.id);
     });
+    
     // Filters
     ['filterMonth','filterType','filterCategory','filterSort'].forEach(id => { document.getElementById(id)?.addEventListener('change', () => this.renderTransactions()); });
+    
     // Theme
     document.getElementById('themeToggle')?.addEventListener('click', () => this.toggleTheme());
     document.getElementById('themeToggleMobile')?.addEventListener('click', () => this.toggleTheme());
+    
     // Export CSV
     document.getElementById('exportBtn')?.addEventListener('click', () => this.exportCSV());
     document.getElementById('exportBtnMobile')?.addEventListener('click', () => this.exportCSV());
+    
     // Table edit/delete
     document.getElementById('transactionsBody')?.addEventListener('click', (e) => {
       const eb=e.target.closest('.edit-btn'); const db=e.target.closest('.delete-btn');
       if(eb) this.openModal(eb.dataset.id); if(db) this.deleteTransaction(db.dataset.id);
     });
+    
     // Settings
     document.getElementById('syncToggle')?.addEventListener('change', () => this.handleSyncToggle());
     document.getElementById('testConnectionBtn')?.addEventListener('click', () => this.handleTestConnection());
@@ -1185,6 +1392,7 @@ const App = {
     document.getElementById('exportJsonBtn')?.addEventListener('click', () => this.handleExportJson());
     document.getElementById('importJsonInput')?.addEventListener('change', (e) => this.handleImportJson(e));
     document.getElementById('clearDataBtn')?.addEventListener('click', () => this.handleClearData());
+    
     // Setup
     document.getElementById('setupForm')?.addEventListener('submit', (e) => this.handleSetupSubmit(e));
     document.getElementById('addSetupMember')?.addEventListener('click', () => {
@@ -1193,6 +1401,7 @@ const App = {
         this.renderSetupMembers();
       } else { this.showToast('Tối đa 6 thành viên','error'); }
     });
+    
     // Delegated: setup member list
     document.getElementById('setupMemberList')?.addEventListener('click', (e) => {
       const picker = e.target.closest('.avatar-picker');
@@ -1205,6 +1414,7 @@ const App = {
         this.setupMemberRows[parseInt(e.target.dataset.index)].name = e.target.value;
       }
     });
+    
     // Member management
     document.getElementById('memberManagementList')?.addEventListener('click', (e) => this.handleMemberManagementClick(e));
     document.getElementById('memberManagementList')?.addEventListener('keydown', (e) => {
@@ -1220,6 +1430,7 @@ const App = {
       }
     });
     document.getElementById('addMemberBtn')?.addEventListener('click', () => this.handleAddMember());
+    
     // Notification settings
     document.getElementById('enableNotifBtn')?.addEventListener('click', () => this.requestNotificationPermission());
     document.getElementById('reminderMemberList')?.addEventListener('change', (e) => {
@@ -1230,17 +1441,20 @@ const App = {
         this.saveReminderSettings(e.target.dataset.member, 'enabled', e.target.checked);
       }
     });
+    
     // Avatar Modal
     document.getElementById('avatarModalClose')?.addEventListener('click', () => this.closeAvatarModal());
     document.getElementById('avatarFileInput')?.addEventListener('change', (e) => this.handleAvatarFileSelect(e));
     document.getElementById('avatarPresetsGrid')?.addEventListener('click', (e) => this.handlePresetSelect(e));
     document.getElementById('confirmAvatarBtn')?.addEventListener('click', () => this.confirmAvatarSelection());
+    
     // Escape key
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         this.closeModal();
         this.closeLoanModal();
         this.closeAvatarModal();
+        this.closeKPIModal();
       }
     });
   }

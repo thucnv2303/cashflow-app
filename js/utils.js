@@ -49,8 +49,8 @@ const AVATARS = [
 
 const MEMBER_COLORS = ['#e77d3e', '#e8658b', '#d9983a', '#2d9d6f', '#5b8def', '#9333ea', '#06b6d4', '#d94f4f'];
 
-// Client-side image resize and square crop to lightweight Base64 string (~5KB)
-function processImageFile(file, maxSize = 120) {
+// Client-side image resize and square crop to lightweight Base64 string (~2KB)
+function processImageFile(file, maxSize = 80) {
   return new Promise((resolve, reject) => {
     if (!file || !file.type.startsWith('image/')) {
       reject(new Error('Vui lòng chọn file hình ảnh hợp lệ'));
@@ -71,7 +71,7 @@ function processImageFile(file, maxSize = 120) {
         const startY = (img.height - minDim) / 2;
 
         ctx.drawImage(img, startX, startY, minDim, minDim, 0, 0, maxSize, maxSize);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
         resolve(dataUrl);
       };
       img.onerror = () => reject(new Error('Không thể đọc file ảnh'));
@@ -80,6 +80,23 @@ function processImageFile(file, maxSize = 120) {
     reader.onerror = () => reject(new Error('Lỗi đọc file'));
     reader.readAsDataURL(file);
   });
+}
+
+// Thousand separator formatting for input fields (e.g. 5000 -> 5.000)
+function formatNumberInput(value) {
+  if (value === null || value === undefined || value === '') return '';
+  const cleanStr = value.toString().replace(/\D/g, '');
+  if (!cleanStr) return '';
+  const num = parseInt(cleanStr, 10);
+  return isNaN(num) ? '' : new Intl.NumberFormat('vi-VN').format(num);
+}
+
+function parseNumberInput(value) {
+  if (!value) return 0;
+  const cleanStr = value.toString().replace(/\D/g, '');
+  if (!cleanStr) return 0;
+  const num = parseInt(cleanStr, 10);
+  return isNaN(num) ? 0 : num;
 }
 
 // Loan Emojis

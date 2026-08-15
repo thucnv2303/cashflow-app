@@ -9,7 +9,7 @@
   <title>CashFlow - Quản lý chi tiêu</title>
   <meta name="description" content="Ứng dụng quản lý tài chính gia đình thông minh, theo dõi thu chi chuyên nghiệp">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=2.4">
+  <link rel="stylesheet" href="css/style.css?v=2.5">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
@@ -105,10 +105,17 @@
               <!-- JS renders member avatars -->
             </div>
           </div>
-          <div class="month-selector">
-            <button class="btn-ghost" id="prevMonth">◀</button>
-            <span id="currentMonth">Tháng 8, 2026</span>
-            <button class="btn-ghost" id="nextMonth">▶</button>
+          <div class="header-right-controls">
+            <div class="scope-toggle" id="dashboardScopeToggle">
+              <button type="button" class="scope-btn active" data-scope="all">Tất cả</button>
+              <button type="button" class="scope-btn" data-scope="family">👨‍👩‍👧‍👦 Chung</button>
+              <button type="button" class="scope-btn" data-scope="personal">👤 Riêng</button>
+            </div>
+            <div class="month-selector">
+              <button class="btn-ghost" id="prevMonth">◀</button>
+              <span id="currentMonth">Tháng 8, 2026</span>
+              <button class="btn-ghost" id="nextMonth">▶</button>
+            </div>
           </div>
         </div>
         
@@ -126,36 +133,38 @@
           <!-- JS renders tips -->
         </div>
         
-        <!-- Summary Cards -->
+        <!-- Summary Cards (Clickable for drilldown popup) -->
         <div class="summary-grid">
-          <div class="summary-card income-card">
+          <div class="summary-card income-card clickable-kpi" id="kpiIncomeCard" role="button" title="Bấm xem chi tiết các khoản thu">
             <div class="card-icon">📥</div>
             <div class="card-info">
-              <span class="card-label">Tổng thu</span>
+              <span class="card-label">Tổng thu <small class="kpi-hint">🔍</small></span>
               <span class="card-value" id="totalIncome">0 ₫</span>
               <span class="card-change positive" id="incomeChange">+0%</span>
             </div>
           </div>
-          <div class="summary-card expense-card">
+          <div class="summary-card expense-card clickable-kpi" id="kpiExpenseCard" role="button" title="Bấm xem chi tiết các khoản chi">
             <div class="card-icon">📤</div>
             <div class="card-info">
-              <span class="card-label">Tổng chi</span>
+              <span class="card-label">Tổng chi <small class="kpi-hint">🔍</small></span>
               <span class="card-value" id="totalExpense">0 ₫</span>
               <span class="card-change negative" id="expenseChange">+0%</span>
             </div>
           </div>
-          <div class="summary-card balance-card">
+          <div class="summary-card balance-card clickable-kpi" id="kpiBalanceCard" role="button" title="Bấm xem chi tiết số dư">
             <div class="card-icon">💎</div>
             <div class="card-info">
-              <span class="card-label">Số dư</span>
+              <span class="card-label">Số dư <small class="kpi-hint">🔍</small></span>
               <span class="card-value" id="balance">0 ₫</span>
+              <span class="card-change" id="balanceStatus">An toàn</span>
             </div>
           </div>
-          <div class="summary-card savings-card">
-            <div class="card-icon">🏦</div>
+          <div class="summary-card savings-card clickable-kpi" id="kpiSavingsCard" role="button" title="Bấm xem chi tiết tỷ lệ tiết kiệm">
+            <div class="card-icon">🎯</div>
             <div class="card-info">
-              <span class="card-label">Tỷ lệ tiết kiệm</span>
+              <span class="card-label">Tỷ lệ tiết kiệm <small class="kpi-hint">🔍</small></span>
               <span class="card-value" id="savingsRate">0%</span>
+              <span class="card-change" id="savingsGoal">Mục tiêu: 20%</span>
             </div>
           </div>
         </div>
@@ -427,11 +436,20 @@
           </div>
         </div>
 
-        <!-- Setup Guide -->
+        <!-- Setup Guide Accordion -->
         <div class="settings-section">
-          <div class="chart-card">
-            <h3>📖 Hướng dẫn cài đặt</h3>
-            <div class="setup-guide">
+          <details class="guide-accordion chart-card">
+            <summary class="guide-summary">
+              <div class="guide-summary-header">
+                <span class="guide-icon">📖</span>
+                <div>
+                  <h3 style="margin:0; font-size:1rem;">Hướng dẫn kết nối Google Sheets (6 bước)</h3>
+                  <span class="text-muted" style="font-size:0.75rem;">Bấm để mở / đóng chi tiết các bước</span>
+                </div>
+              </div>
+              <span class="accordion-arrow">▼</span>
+            </summary>
+            <div class="setup-guide" style="margin-top: 14px; border-top: 1px solid var(--border); padding-top: 14px;">
               <div class="guide-step">
                 <div class="step-number">1</div>
                 <div class="step-content">
@@ -451,7 +469,7 @@
                 <div class="step-content">
                   <strong>Dán code</strong>
                   <p>Xóa nội dung cũ → dán code bên dưới → nhấn 💾 Lưu</p>
-                  <button class="btn-ghost" id="copyScriptBtn" type="button">📋 Copy code Apps Script</button>
+                  <button class="btn-ghost" id="copyScriptBtn" type="button" style="margin-top: 6px;">📋 Copy code Apps Script</button>
                 </div>
               </div>
               <div class="guide-step">
@@ -480,7 +498,7 @@
                 </div>
               </div>
             </div>
-          </div>
+          </details>
         </div>
 
         <!-- Data Management -->
@@ -546,18 +564,28 @@
             <button type="button" class="type-btn income" data-type="income">📥 Thu nhập</button>
           </div>
 
-          <!-- Member Selector -->
-          <div class="form-group">
-            <label>Ai chi?</label>
-            <div class="member-selector" id="memberSelector">
-              <!-- JS renders member buttons -->
+          <!-- Members: Ai chi? & Chi cho ai? in 1 row -->
+          <div class="form-row member-row" style="margin-bottom: 6px; gap: 6px;">
+            <!-- Member Selector (Ai chi?) -->
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+              <label id="memberSelectorLabel" style="font-size: 0.72rem;">Ai chi / nhận?</label>
+              <div class="member-selector" id="memberSelector">
+                <!-- JS renders member buttons -->
+              </div>
+            </div>
+            <!-- Beneficiary Selector (Chi cho ai?) -->
+            <div class="form-group" style="flex: 1; margin-bottom: 0;" id="beneficiaryGroup">
+              <label style="font-size: 0.72rem;">Chi cho ai? <span class="text-muted" style="font-weight: normal; font-size: 0.68rem;">(Tùy chọn)</span></label>
+              <div class="beneficiary-selector" id="beneficiarySelector">
+                <!-- JS renders family (common) + member buttons -->
+              </div>
             </div>
           </div>
 
           <!-- Amount -->
           <div class="form-group amount-group">
             <label for="amount">Số tiền (₫)</label>
-            <input type="number" id="amount" placeholder="0" min="0" inputmode="numeric" required autocomplete="off">
+            <input type="text" id="amount" placeholder="0" inputmode="numeric" required autocomplete="off">
           </div>
 
           <!-- Category -->
@@ -583,6 +611,26 @@
           <!-- Submit -->
           <button type="submit" class="btn-primary btn-submit" id="submitBtn">Lưu giao dịch</button>
         </form>
+      </div>
+    </div>
+
+    <!-- KPI Drilldown Modal -->
+    <div class="modal-overlay" id="kpiDrilldownModal">
+      <div class="modal kpi-drilldown-modal">
+        <div class="modal-header">
+          <div>
+            <h2 id="kpiDrilldownTitle">Chi tiết các khoản</h2>
+            <span class="text-muted" id="kpiDrilldownSubtitle" style="font-size: 0.78rem;">Tháng này</span>
+          </div>
+          <button class="btn-close" id="kpiDrilldownClose">✕</button>
+        </div>
+        <div class="kpi-drilldown-total" id="kpiDrilldownTotal">
+          <span class="kpi-total-label">Tổng cộng</span>
+          <span class="kpi-total-val" id="kpiTotalVal">0 ₫</span>
+        </div>
+        <div class="kpi-drilldown-list" id="kpiDrilldownList">
+          <!-- JS renders detailed transaction list -->
+        </div>
       </div>
     </div>
 
@@ -681,9 +729,9 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/utils.js?v=2.4"></script>
-  <script src="js/storage.js?v=2.4"></script>
-  <script src="js/charts.js?v=2.4"></script>
-  <script src="js/app.js?v=2.4"></script>
+  <script src="js/utils.js?v=2.5"></script>
+  <script src="js/storage.js?v=2.5"></script>
+  <script src="js/charts.js?v=2.5"></script>
+  <script src="js/app.js?v=2.5"></script>
 </body>
 </html>

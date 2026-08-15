@@ -17,9 +17,9 @@ function setupSheet() {
   let sheet = ss.getSheetByName('Transactions');
   if (!sheet) {
     sheet = ss.insertSheet('Transactions');
-    sheet.appendRow(['ID', 'Loại', 'Số tiền', 'Danh mục', 'Ghi chú', 'Ngày', 'Thành viên', 'Ngày tạo']);
+    sheet.appendRow(['ID', 'Loại', 'Số tiền', 'Danh mục', 'Ghi chú', 'Ngày', 'Thành viên', 'Ngày tạo', 'Chi cho ai']);
     sheet.setFrozenRows(1);
-    sheet.getRange('A1:H1').setFontWeight('bold');
+    sheet.getRange('A1:I1').setFontWeight('bold');
   }
   
   // Sheet Loans
@@ -63,7 +63,21 @@ function responseJson(data, callback) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+function doPost(e) {
+  // Support both JSON body in postData and standard form parameters
+  if (e && e.postData && e.postData.contents) {
+    try {
+      var body = JSON.parse(e.postData.contents);
+      e.parameter = e.parameter || {};
+      for (var k in body) { e.parameter[k] = body[k]; }
+    } catch(err) {}
+  }
+  return doGet(e);
+}
+
 function doGet(e) {
+  e = e || {};
+  e.parameter = e.parameter || {};
   const action = e.parameter.action || 'getAll';
   const cb = e.parameter.callback || null;
   
@@ -84,9 +98,15 @@ function doGet(e) {
       for (let i = 1; i < data.length; i++) {
         if (data[i][0]) {
           transactions.push({
-            id: data[i][0], type: data[i][1], amount: Number(data[i][2]),
-            category: data[i][3], note: data[i][4], date: data[i][5],
-            memberId: data[i][6], createdAt: data[i][7]
+            id: String(data[i][0]),
+            type: String(data[i][1] || 'expense'),
+            amount: Number(data[i][2] || 0),
+            category: String(data[i][3] || 'other'),
+            note: String(data[i][4] || ''),
+            date: String(data[i][5] || ''),
+            memberId: String(data[i][6] || ''),
+            createdAt: String(data[i][7] || ''),
+            beneficiaryId: String(data[i][8] || '')
           });
         }
       }
@@ -98,7 +118,8 @@ function doGet(e) {
       getSheet('Transactions').appendRow([
         obj.id || '', obj.type || '', obj.amount || 0,
         obj.category || '', obj.note || '', obj.date || '',
-        obj.memberId || '', obj.createdAt || new Date().toISOString()
+        obj.memberId || '', obj.createdAt || new Date().toISOString(),
+        obj.beneficiaryId || ''
       ]);
       return responseJson({ success: true, message: 'Đã thêm giao dịch' }, cb);
     }
@@ -109,10 +130,10 @@ function doGet(e) {
       const sheet = getSheet('Transactions');
       const rowNum = findRowById(sheet, id);
       if (rowNum > -1) {
-        sheet.getRange(rowNum, 1, 1, 8).setValues([[
+        sheet.getRange(rowNum, 1, 1, 9).setValues([[
           obj.id || id, obj.type || '', obj.amount || 0,
           obj.category || '', obj.note || '', obj.date || '',
-          obj.memberId || '', obj.createdAt || ''
+          obj.memberId || '', obj.createdAt || '', obj.beneficiaryId || ''
         ]]);
         return responseJson({ success: true }, cb);
       }
@@ -135,9 +156,9 @@ function doGet(e) {
         const rows = transactions.map(t => [
           t.id || '', t.type || '', t.amount || 0,
           t.category || '', t.note || '', t.date || '',
-          t.memberId || '', t.createdAt || ''
+          t.memberId || '', t.createdAt || '', t.beneficiaryId || ''
         ]);
-        sheet.getRange(2, 1, rows.length, 8).setValues(rows);
+        sheet.getRange(2, 1, rows.length, 9).setValues(rows);
       }
       return responseJson({ success: true, message: 'Đã đồng bộ giao dịch' }, cb);
     }
