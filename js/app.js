@@ -189,7 +189,12 @@ const App = {
     if (codeEl) codeEl.value = APPS_SCRIPT_CODE;
     // Check if setup is done
     if (!Storage.isSetupDone()) {
-      this.showSetupModal();
+      // If members already exist (setup flag lost), auto-recover
+      if (Storage.getMembers().length > 0) {
+        Storage.setSetupDone();
+      } else {
+        this.showSetupModal();
+      }
     }
     this.renderCurrentPage();
     // Init notifications
@@ -210,7 +215,7 @@ const App = {
   },
 
   renderSetupRows() {
-    const container = document.getElementById('setupMembersList');
+    const container = document.getElementById('setupMemberList');
     if (!container) return;
     container.innerHTML = this.setupMemberRows.map((row, i) => `
       <div class="setup-member-row" data-index="${i}">
@@ -246,7 +251,7 @@ const App = {
 
   handleSetupSubmit(e) {
     e.preventDefault();
-    const familyName = document.getElementById('setupFamilyName').value.trim() || 'Gia đình';
+    const familyName = document.getElementById('familyName').value.trim() || 'Gia đình';
     const members = [];
     this.setupMemberRows.forEach((row, i) => {
       if (row.name.trim()) {
