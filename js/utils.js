@@ -26,22 +26,61 @@ const CHART_COLORS = [
   '#a29bfe', '#55efc4', '#ff7675', '#ffeaa7'
 ];
 
-// Avatar System - Cute illustrated avatars via DiceBear API
+// Avatar System - Cute illustrated avatars & photo upload support
 const AVATAR_STYLE = 'adventurer'; // cute illustrated style
 function getAvatarUrl(seed) {
   return `https://api.dicebear.com/9.x/${AVATAR_STYLE}/svg?seed=${encodeURIComponent(seed)}&backgroundColor=transparent`;
 }
 
 const AVATARS = [
-  { id: 'avatar_dad', emoji: '👨', label: 'Bố', seed: 'dad-cashflow', img: getAvatarUrl('dad-family') },
-  { id: 'avatar_mom', emoji: '👩', label: 'Mẹ', seed: 'mom-cashflow', img: getAvatarUrl('mom-family') },
-  { id: 'avatar_son', emoji: '👦', label: 'Con trai', seed: 'son-cashflow', img: getAvatarUrl('boy-family') },
-  { id: 'avatar_daughter', emoji: '👧', label: 'Con gái', seed: 'girl-cashflow', img: getAvatarUrl('girl-family') },
-  { id: 'avatar_grandpa', emoji: '👴', label: 'Ông', seed: 'grandpa-cashflow', img: getAvatarUrl('grandpa-family') },
-  { id: 'avatar_grandma', emoji: '👵', label: 'Bà', seed: 'grandma-cashflow', img: getAvatarUrl('grandma-family') },
+  { id: 'avatar_dad', emoji: '👨', label: 'Bố', img: getAvatarUrl('dad-family') },
+  { id: 'avatar_mom', emoji: '👩', label: 'Mẹ', img: getAvatarUrl('mom-family') },
+  { id: 'avatar_son', emoji: '👦', label: 'Con trai', img: getAvatarUrl('boy-family') },
+  { id: 'avatar_daughter', emoji: '👧', label: 'Con gái', img: getAvatarUrl('girl-family') },
+  { id: 'avatar_grandpa', emoji: '👴', label: 'Ông', img: getAvatarUrl('grandpa-family') },
+  { id: 'avatar_grandma', emoji: '👵', label: 'Bà', img: getAvatarUrl('grandma-family') },
+  { id: 'avatar_baby_boy', emoji: '👶', label: 'Bé trai', img: getAvatarUrl('baby-boy-fun') },
+  { id: 'avatar_baby_girl', emoji: '👧', label: 'Bé gái', img: getAvatarUrl('baby-girl-fun') },
+  { id: 'avatar_young_man', emoji: '🧑', label: 'Anh', img: getAvatarUrl('young-man-cool') },
+  { id: 'avatar_young_woman', emoji: '👱‍♀️', label: 'Chị', img: getAvatarUrl('young-woman-style') },
+  { id: 'avatar_cat', emoji: '🐱', label: 'Mèo cưng', img: 'https://api.dicebear.com/9.x/bottts/svg?seed=cat-cute&backgroundColor=transparent' },
+  { id: 'avatar_dog', emoji: '🐶', label: 'Cún cưng', img: 'https://api.dicebear.com/9.x/bottts/svg?seed=dog-cute&backgroundColor=transparent' }
 ];
 
-const MEMBER_COLORS = ['#e77d3e', '#e8658b', '#d9983a', '#2d9d6f', '#5b8def', '#d94f4f'];
+const MEMBER_COLORS = ['#e77d3e', '#e8658b', '#d9983a', '#2d9d6f', '#5b8def', '#9333ea', '#06b6d4', '#d94f4f'];
+
+// Client-side image resize and square crop to lightweight Base64 string (~5KB)
+function processImageFile(file, maxSize = 120) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith('image/')) {
+      reject(new Error('Vui lòng chọn file hình ảnh hợp lệ'));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = maxSize;
+        canvas.height = maxSize;
+        const ctx = canvas.getContext('2d');
+
+        // Center crop to square
+        const minDim = Math.min(img.width, img.height);
+        const startX = (img.width - minDim) / 2;
+        const startY = (img.height - minDim) / 2;
+
+        ctx.drawImage(img, startX, startY, minDim, minDim, 0, 0, maxSize, maxSize);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        resolve(dataUrl);
+      };
+      img.onerror = () => reject(new Error('Không thể đọc file ảnh'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('Lỗi đọc file'));
+    reader.readAsDataURL(file);
+  });
+}
 
 // Loan Emojis
 const LOAN_TYPES = [

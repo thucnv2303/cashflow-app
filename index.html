@@ -2,9 +2,12 @@
 <html lang="vi" data-theme="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#fef7ed">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>CashFlow - Quản lý chi tiêu</title>
-  <meta name="description" content="Ứng dụng quản lý tài chính cá nhân, theo dõi thu chi chuyên nghiệp">
+  <meta name="description" content="Ứng dụng quản lý tài chính gia đình thông minh, theo dõi thu chi chuyên nghiệp">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
@@ -243,6 +246,7 @@
             <thead>
               <tr>
                 <th>Ngày</th>
+                <th>Người chi</th>
                 <th>Loại</th>
                 <th>Danh mục</th>
                 <th>Ghi chú</th>
@@ -254,7 +258,7 @@
             </tbody>
             <tfoot>
               <tr>
-                <td colspan="4"><strong>Tổng cộng</strong></td>
+                <td colspan="5"><strong>Tổng cộng</strong></td>
                 <td id="tableTotal" colspan="2"><strong>0 ₫</strong></td>
               </tr>
             </tfoot>
@@ -542,7 +546,6 @@
             <button type="button" class="type-btn income" data-type="income">📥 Thu nhập</button>
           </div>
 
-
           <!-- Member Selector -->
           <div class="form-group">
             <label>Ai chi?</label>
@@ -554,7 +557,7 @@
           <!-- Amount -->
           <div class="form-group amount-group">
             <label for="amount">Số tiền (₫)</label>
-            <input type="number" id="amount" placeholder="0" min="0" required autocomplete="off">
+            <input type="number" id="amount" placeholder="0" min="0" inputmode="numeric" required autocomplete="off">
           </div>
 
           <!-- Category -->
@@ -583,7 +586,6 @@
       </div>
     </div>
 
-
     <!-- Loan Modal -->
     <div class="modal-overlay" id="loanModal">
       <div class="modal">
@@ -606,21 +608,21 @@
           <div class="form-row">
             <div class="form-group">
               <label for="loanPrincipal">Số tiền vay (₫)</label>
-              <input type="number" id="loanPrincipal" placeholder="0" min="0" required>
+              <input type="number" id="loanPrincipal" placeholder="0" min="0" inputmode="numeric" required>
             </div>
             <div class="form-group">
               <label for="loanRate">Lãi suất (%/năm)</label>
-              <input type="number" id="loanRate" placeholder="8" min="0" step="0.1" required>
+              <input type="number" id="loanRate" placeholder="8" min="0" step="0.1" inputmode="decimal" required>
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label for="loanTerm">Kỳ hạn (tháng)</label>
-              <input type="number" id="loanTerm" placeholder="240" min="1" required>
+              <input type="number" id="loanTerm" placeholder="240" min="1" inputmode="numeric" required>
             </div>
             <div class="form-group">
               <label for="loanMonthly">Trả hàng tháng (₫)</label>
-              <input type="number" id="loanMonthly" placeholder="0" min="0" required>
+              <input type="number" id="loanMonthly" placeholder="0" min="0" inputmode="numeric" required>
             </div>
           </div>
           <div class="form-group">
@@ -633,6 +635,41 @@
           </div>
           <button type="submit" class="btn-primary btn-submit">Lưu khoản vay</button>
         </form>
+      </div>
+    </div>
+
+    <!-- Avatar Picker Modal -->
+    <div class="modal-overlay" id="avatarModal">
+      <div class="modal avatar-modal">
+        <div class="modal-header">
+          <h2>Chọn ảnh đại diện</h2>
+          <button class="btn-close" id="avatarModalClose">✕</button>
+        </div>
+        
+        <!-- Upload from device section -->
+        <div class="avatar-upload-box">
+          <div class="upload-preview" id="uploadAvatarPreview">
+            <img src="https://api.dicebear.com/9.x/adventurer/svg?seed=dad-family&backgroundColor=transparent" alt="Preview" id="uploadPreviewImg">
+          </div>
+          <div class="upload-controls">
+            <label class="btn-upload-photo" for="avatarFileInput">
+              📸 Tải ảnh từ máy / điện thoại
+              <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
+            </label>
+            <span class="upload-hint">Chụp ảnh từ camera hoặc chọn ảnh từ thư viện</span>
+          </div>
+        </div>
+
+        <div class="avatar-divider"><span>HOẶC CHỌN TỪ BỘ SƯU TẬP</span></div>
+
+        <!-- Preset Avatars Grid -->
+        <div class="avatar-presets-grid" id="avatarPresetsGrid">
+          <!-- JS renders 12 cute presets -->
+        </div>
+
+        <div class="modal-actions" style="margin-top:16px;">
+          <button type="button" class="btn-primary" id="confirmAvatarBtn" style="width:100%;">Áp dụng ảnh này</button>
+        </div>
       </div>
     </div>
 

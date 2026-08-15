@@ -158,36 +158,19 @@ const App = {
   },
 
   showAvatarPicker(index, button) {
-    document.querySelectorAll('.avatar-popover').forEach(p => p.remove());
-    const popover = document.createElement('div');
-    popover.className = 'avatar-popover';
-    popover.innerHTML = AVATARS.map(a =>
-      `<button type="button" class="avatar-option" data-avatar-id="${a.id}" data-index="${index}"><img src="${a.img}" alt="${a.label}" class="avatar-img"><span>${a.label}</span></button>`
-    ).join('');
-    button.parentElement.style.position = 'relative';
-    button.parentElement.appendChild(popover);
+    const currentRow = this.setupMemberRows[index];
+    const currentAv = AVATARS.find(a => a.id === currentRow.avatarId) || AVATARS[0];
+    const currentImg = currentRow.avatarImg || currentAv.img;
 
-    popover.addEventListener('click', (ev) => {
-      const opt = ev.target.closest('.avatar-option');
-      if (opt) {
-        const idx = parseInt(opt.dataset.index);
-        const avId = opt.dataset.avatarId;
-        const av = AVATARS.find(a => a.id === avId);
-        this.setupMemberRows[idx].avatarId = avId;
-        button.innerHTML = `<img src="${av.img}" alt="${av.label}" class="avatar-img">`;
-        popover.remove();
+    this.openAvatarModal({
+      currentImg: currentImg,
+      onSelect: (selected) => {
+        this.setupMemberRows[index].avatarId = selected.id || 'custom';
+        this.setupMemberRows[index].avatarImg = selected.img;
+        this.setupMemberRows[index].avatar = selected.emoji || '👤';
+        button.innerHTML = `<img src="${selected.img}" alt="Avatar" class="avatar-img">`;
       }
     });
-
-    // Close on outside click
-    setTimeout(() => {
-      document.addEventListener('click', function close(ev) {
-        if (!popover.contains(ev.target) && ev.target !== button) {
-          popover.remove();
-          document.removeEventListener('click', close);
-        }
-      });
-    }, 10);
   },
 
   // ==================== THEME ====================
@@ -598,33 +581,114 @@ const App = {
   },
 
   showMemberAvatarPicker(memberId, button) {
-    document.querySelectorAll('.avatar-popover').forEach(p => p.remove());
-    const popover = document.createElement('div');
-    popover.className = 'avatar-popover';
-    popover.innerHTML = AVATARS.map(a =>
-      `<button type="button" class="avatar-option" data-avatar-id="${a.id}" data-member-id="${memberId}"><img src="${a.img}" alt="${a.label}" class="avatar-img"><span>${a.label}</span></button>`
-    ).join('');
-    button.style.position = 'relative';
-    button.parentElement.style.position = 'relative';
-    button.parentElement.appendChild(popover);
-    popover.addEventListener('click', (ev) => {
-      const opt = ev.target.closest('.avatar-option');
-      if (opt) {
-        const avId = opt.dataset.avatarId;
-        const av = AVATARS.find(a => a.id === avId);
-        Storage.updateMember(memberId, { avatarId: avId, avatarImg: av.img, avatar: av.emoji });
-        popover.remove();
+    const member = Storage.getMemberById(memberId);
+    if (!member) return;
+    const currentAv = AVATARS.find(a => a.id === member.avatarId) || AVATARS[0];
+    const currentImg = member.avatarImg || currentAv.img;
+
+    this.openAvatarModal({
+      currentImg: currentImg,
+      onSelect: (selected) => {
+        Storage.updateMember(memberId, {
+          avatarId: selected.id || 'custom',
+          avatarImg: selected.img,
+          avatar: selected.emoji || '👤'
+        });
         this.renderMemberManagement();
         this.renderFamilyAvatars();
-        this.showToast('Đã đổi avatar ✅');
+        this.showToast('Đã đổi avatar thành công! ✅');
       }
     });
-    setTimeout(() => {
-      const closeHandler = (ev) => {
-        if (!popover.contains(ev.target)) { popover.remove(); document.removeEventListener('click', closeHandler); }
+  },
+
+  // ==================== AVATAR MODAL CONTROLLER ====================
+  _avatarModalCallback: null,
+  _currentSelectedAvatar: null,
+
+  openAvatarModal({ currentImg, onSelect }) {
+    const modal = document.getElementById('avatarModal');
+    if (!modal) return;
+    this._avatarModalCallback = onSelect;
+    this._currentSelectedAvatar = { img: currentImg || AVATARS[0].img };
+
+    // Update preview
+    const previewImg = document.getElementById('uploadPreviewImg');
+    if (previewImg) previewImg.src = this._currentSelectedAvatar.img;
+
+    // Render presets
+    this.renderAvatarPresets();
+
+    modal.classList.add('active');
+  },
+
+  closeAvatarModal() {
+    const modal = document.getElementById('avatarModal');
+    if (modal) modal.classList.remove('active');
+    this._avatarModalCallback = null;
+    this._currentSelectedAvatar = null;
+  },
+
+  renderAvatarPresets() {
+    const grid = document.getElementById('avatarPresetsGrid');
+    if (!grid) return;
+    grid.innerHTML = AVATARS.map(a => {
+      const isSelected = this._currentSelectedAvatar && this._currentSelectedAvatar.img === a.img;
+      return `
+        <button type="button" class="avatar-preset-card ${isSelected ? 'selected' : ''}" data-avatar-id="${a.id}">
+          <img src="${a.img}" alt="${a.label}" class="preset-img">
+          <span class="preset-label">${a.label}</span>
+        </button>
+      `;
+    }).join('');
+  },
+
+  handleAvatarFileSelect(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    this.showToast('Đang xử lý ảnh...');
+    processImageFile(file, 128).then(dataUrl => {
+      this._currentSelectedAvatar = {
+        id: 'uploaded_' + Date.now(),
+        img: dataUrl,
+        emoji: '📸',
+        label: 'Ảnh tự tải'
       };
-      document.addEventListener('click', closeHandler);
-    }, 100);
+      const previewImg = document.getElementById('uploadPreviewImg');
+      if (previewImg) previewImg.src = dataUrl;
+      // Deselect presets
+      document.querySelectorAll('.avatar-preset-card').forEach(c => c.classList.remove('selected'));
+      this.showToast('Đã tải ảnh lên! Bấm Áp dụng để lưu ✅');
+    }).catch(err => {
+      this.showToast(err.message || 'Lỗi đọc ảnh', 'error');
+    });
+  },
+
+  handlePresetSelect(e) {
+    const card = e.target.closest('.avatar-preset-card');
+    if (!card) return;
+    const avId = card.dataset.avatarId;
+    const av = AVATARS.find(a => a.id === avId);
+    if (!av) return;
+
+    this._currentSelectedAvatar = {
+      id: av.id,
+      img: av.img,
+      emoji: av.emoji,
+      label: av.label
+    };
+
+    const previewImg = document.getElementById('uploadPreviewImg');
+    if (previewImg) previewImg.src = av.img;
+
+    document.querySelectorAll('.avatar-preset-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+  },
+
+  confirmAvatarSelection() {
+    if (this._currentSelectedAvatar && this._avatarModalCallback) {
+      this._avatarModalCallback(this._currentSelectedAvatar);
+    }
+    this.closeAvatarModal();
   },
 
   handleAddMember() {
@@ -1146,8 +1210,19 @@ const App = {
         this.saveReminderSettings(e.target.dataset.member, 'enabled', e.target.checked);
       }
     });
+    // Avatar Modal
+    document.getElementById('avatarModalClose')?.addEventListener('click', () => this.closeAvatarModal());
+    document.getElementById('avatarFileInput')?.addEventListener('change', (e) => this.handleAvatarFileSelect(e));
+    document.getElementById('avatarPresetsGrid')?.addEventListener('click', (e) => this.handlePresetSelect(e));
+    document.getElementById('confirmAvatarBtn')?.addEventListener('click', () => this.confirmAvatarSelection());
     // Escape key
-    document.addEventListener('keydown', (e) => { if(e.key==='Escape') { this.closeModal(); this.closeLoanModal(); } });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.closeModal();
+        this.closeLoanModal();
+        this.closeAvatarModal();
+      }
+    });
   }
 };
 
