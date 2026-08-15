@@ -719,15 +719,36 @@ const Storage = {
         const membersData = await this.fetchMembersFromSheets();
         if (Array.isArray(membersData) && membersData.length > 0) {
           const localMembers = this.getMembers();
-          // Smart merge: never wipe out a member's valid avatarImg if the incoming sync is blank
-          const merged = membersData.map(inc => {
-            const local = localMembers.find(l => l.id === inc.id);
-            if (local && local.avatarImg && (!inc.avatarImg || inc.avatarImg === '')) {
-              return { ...inc, avatarImg: local.avatarImg, avatarId: local.avatarId };
-            }
-            return inc;
-          });
+          const incomingIds = new Set(membersData.map(m => m.id));
+          const localOnly = localMembers.filter(l => !incomingIds.has(l.id));
+
+          // Smart merge: never wipe out a member's valid avatarImg or local changes
+          const merged = [
+            ...membersData.map(inc => {
+              const local = localMembers.find(l => l.id === inc.id);
+              if (local) {
+                return {
+                  ...inc,
+                  name: local.name || inc.name,
+                  avatarImg: (local.avatarImg && local.avatarImg.length > 5) ? local.avatarImg : (inc.avatarImg || ''),
+                  avatarId: local.avatarId || inc.avatarId || 'avatar_dad',
+                  avatar: local.avatar || inc.avatar || '👤',
+                  color: local.color || inc.color || '#e77d3e'
+                };
+              }
+              return inc;
+            }),
+            ...localOnly
+          ];
+
           this.saveMembers(merged);
+
+          if (localOnly.length > 0) {
+            this.syncMembersToSheets().catch(e => console.warn('Auto-push local members failed:', e));
+          }
+        } else if (this.getMembers().length > 0) {
+          // If Sheets returned empty members list, upload local members to populate Sheet
+          this.syncMembersToSheets().catch(e => console.warn('Auto-populate members in sheets failed:', e));
         }
       } catch (e) { console.warn('Sync members failed:', e); }
 

@@ -108,6 +108,15 @@ function responseJson(data, callback) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+function safeParseJson(data) {
+  if (!data) return null;
+  if (typeof data === 'object') return data;
+  if (typeof data === 'string') {
+    try { return JSON.parse(data); } catch(e) { return null; }
+  }
+  return null;
+}
+
 function doPost(e) {
   // Support both JSON body in postData and standard form parameters
   if (e && e.postData && e.postData.contents) {
@@ -179,7 +188,7 @@ function doGet(e) {
     }
     
     if (action === 'add') {
-      const obj = JSON.parse(e.parameter.data);
+      const obj = safeParseJson(e.parameter.data) || {};
       getSheet('Transactions').appendRow([
         obj.id || '', obj.type || '', obj.amount || 0,
         obj.category || '', obj.note || '', obj.date || '',
@@ -191,7 +200,7 @@ function doGet(e) {
     
     if (action === 'update') {
       const id = e.parameter.id;
-      const obj = JSON.parse(e.parameter.data);
+      const obj = safeParseJson(e.parameter.data) || {};
       const sheet = getSheet('Transactions');
       const rowNum = findRowById(sheet, id);
       if (rowNum > -1) {
@@ -213,7 +222,7 @@ function doGet(e) {
     }
     
     if (action === 'sync') {
-      const transactions = JSON.parse(e.parameter.data);
+      const transactions = safeParseJson(e.parameter.data) || [];
       const sheet = getSheet('Transactions');
       const lastRow = sheet.getLastRow();
       if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
@@ -249,7 +258,7 @@ function doGet(e) {
     }
     
     if (action === 'syncLoans') {
-      const loans = JSON.parse(e.parameter.data);
+      const loans = safeParseJson(e.parameter.data) || [];
       const sheet = getSheet('Loans');
       const lastRow = sheet.getLastRow();
       if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
@@ -286,7 +295,7 @@ function doGet(e) {
     }
     
     if (action === 'syncMembers') {
-      const members = JSON.parse(e.parameter.data);
+      const members = safeParseJson(e.parameter.data) || [];
       const sheet = getSheet('Members');
       if (!sheet) return responseJson({ success: false, error: 'Sheet Members không tồn tại' }, cb);
       const lastRow = sheet.getLastRow();
@@ -320,7 +329,7 @@ function doGet(e) {
     }
 
     if (action === 'syncBudgets') {
-      const budgets = JSON.parse(e.parameter.data);
+      const budgets = safeParseJson(e.parameter.data) || {};
       const sheet = getSheet('Budgets');
       if (!sheet) return responseJson({ success: false, error: 'Sheet Budgets không tồn tại' }, cb);
       const lastRow = sheet.getLastRow();
@@ -355,7 +364,7 @@ function doGet(e) {
     }
 
     if (action === 'syncCustomCats') {
-      const cats = JSON.parse(e.parameter.data);
+      const cats = safeParseJson(e.parameter.data) || [];
       const sheet = getSheet('CustomCategories');
       if (!sheet) return responseJson({ success: false, error: 'Sheet CustomCategories không tồn tại' }, cb);
       const lastRow = sheet.getLastRow();
