@@ -41,6 +41,20 @@ function setupSheet() {
     catSheet.setFrozenRows(1);
     catSheet.getRange('A1:E1').setFontWeight('bold');
   }
+  let savingsSheet = ss.getSheetByName('SavingsGoals');
+  if (!savingsSheet) {
+    savingsSheet = ss.insertSheet('SavingsGoals');
+    savingsSheet.appendRow(['ID','Tên','Emoji','Mục tiêu','Hiện có','Hạn ngày','Thành viên','Ngày tạo']);
+    savingsSheet.setFrozenRows(1);
+    savingsSheet.getRange('A1:H1').setFontWeight('bold');
+  }
+  let logsSheet = ss.getSheetByName('SavingsLogs');
+  if (!logsSheet) {
+    logsSheet = ss.insertSheet('SavingsLogs');
+    logsSheet.appendRow(['ID','GoalID','GoalName','Loại','Số tiền','Thành viên','Ngày','Ghi chú','Ngày tạo']);
+    logsSheet.setFrozenRows(1);
+    logsSheet.getRange('A1:I1').setFontWeight('bold');
+  }
 }
 function getSheet(name) {
   return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
@@ -90,6 +104,8 @@ function doGet(e) {
     if (action==='syncBudgets'){var bs=JSON.parse(e.parameter.data),s=getSheet('Budgets'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(bs&&typeof bs==='object'){var rows=Object.keys(bs).map(function(k){return[k,Number(bs[k]||0),new Date().toISOString()];});if(rows.length>0)s.getRange(2,1,rows.length,3).setValues(rows);}return responseJson({success:true,message:'Đã đồng bộ ngân sách'}, cb);}
     if (action==='getCustomCats'){var s=getSheet('CustomCategories');if(!s)return responseJson({success:true,data:[]}, cb);var d=s.getDataRange().getValues(),r=[];for(var i=1;i<d.length;i++){if(d[i][0])r.push({id:String(d[i][0]),label:String(d[i][1]||''),emoji:String(d[i][2]||'📦'),type:String(d[i][3]||'expense'),createdAt:String(d[i][4]||'')});}return responseJson({success:true,data:r}, cb);}
     if (action==='syncCustomCats'){var cs=JSON.parse(e.parameter.data),s=getSheet('CustomCategories'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(cs&&cs.length>0){var rows=cs.map(function(c){return[c.id||'',c.label||'',c.emoji||'📦',c.type||'expense',c.createdAt||''];});s.getRange(2,1,rows.length,5).setValues(rows);}return responseJson({success:true,message:'Đã đồng bộ danh mục tùy chỉnh'}, cb);}
+    if (action==='getSavings'){var gs=getSheet('SavingsGoals'),ls=getSheet('SavingsLogs'),goals=[],logs=[];if(gs){var d=gs.getDataRange().getValues();for(var i=1;i<d.length;i++){if(d[i][0])goals.push({id:String(d[i][0]),name:String(d[i][1]||''),emoji:String(d[i][2]||'🐷'),targetAmount:Number(d[i][3]||0),currentAmount:Number(d[i][4]||0),targetDate:String(d[i][5]||''),memberId:String(d[i][6]||'family'),createdAt:String(d[i][7]||'')});}}if(ls){var d=ls.getDataRange().getValues();for(var i=1;i<d.length;i++){if(d[i][0])logs.push({id:String(d[i][0]),goalId:String(d[i][1]||''),goalName:String(d[i][2]||''),type:String(d[i][3]||'deposit'),amount:Number(d[i][4]||0),memberId:String(d[i][5]||'family'),date:String(d[i][6]||''),note:String(d[i][7]||''),createdAt:String(d[i][8]||'')});}}return responseJson({success:true,data:{goals:goals,logs:logs}}, cb);}
+    if (action==='syncSavings'){var goals=JSON.parse(e.parameter.goals||'[]'),logs=JSON.parse(e.parameter.logs||'[]');var gs=getSheet('SavingsGoals');if(gs){var lr=gs.getLastRow();if(lr>1)gs.getRange(2,1,lr-1,gs.getLastColumn()).clearContent();if(goals&&goals.length>0){var rows=goals.map(function(g){return[g.id||'',g.name||'',g.emoji||'🐷',Number(g.targetAmount||0),Number(g.currentAmount||0),g.targetDate||'',g.memberId||'family',g.createdAt||''];});gs.getRange(2,1,rows.length,8).setValues(rows);}}var ls=getSheet('SavingsLogs');if(ls){var lr=ls.getLastRow();if(lr>1)ls.getRange(2,1,lr-1,ls.getLastColumn()).clearContent();if(logs&&logs.length>0){var rows=logs.map(function(l){return[l.id||'',l.goalId||'',l.goalName||'',l.type||'deposit',Number(l.amount||0),l.memberId||'family',l.date||'',l.note||'',l.createdAt||''];});ls.getRange(2,1,rows.length,9).setValues(rows);}}return responseJson({success:true,message:'Đã đồng bộ tiết kiệm'}, cb);}
     return responseJson({success:false,error:'Unknown action'}, cb);
   } catch(err) {return responseJson({success:false,error:err.toString()}, cb);} finally {lock.releaseLock();}
 }`;
@@ -102,8 +118,10 @@ const App = {
   analyticsMonth: getCurrentMonth(),
   dashboardScope: 'all',
   budgetScope: 'all',
+  savingsScope: 'all',
   editingId: null,
   editingLoanId: null,
+  editingSavingsGoalId: null,
   selectedType: 'expense',
   selectedCategory: null,
   selectedMemberId: null,
@@ -122,9 +140,8 @@ const App = {
     // Check if setup is done
     if (!Storage.isSetupDone()) {
       this.showSetupModal();
-    } else {
-      this.renderCurrentPage();
     }
+    this.renderCurrentPage();
     // Init notifications
     if ('Notification' in window && Notification.permission === 'granted') {
       this.registerServiceWorker();
@@ -132,45 +149,61 @@ const App = {
     }
   },
 
-  // ==================== SETUP WIZARD ====================
+  // ==================== AVATAR SELECTION ====================
   showSetupModal() {
-    const modal = document.getElementById('setupModal');
-    if (modal) modal.classList.add('active');
     this.setupMemberRows = [
-      { avatarId: 'avatar_dad', name: '' },
-      { avatarId: 'avatar_mom', name: '' }
+      { name: 'Ba Dâu', avatarId: 'dad', avatarImg: AVATARS[0].img },
+      { name: 'Mẹ Dâu', avatarId: 'mom', avatarImg: AVATARS[1].img }
     ];
-    this.renderSetupMembers();
+    this.renderSetupRows();
+    document.getElementById('setupModal')?.classList.add('active');
   },
 
-  renderSetupMembers() {
-    const list = document.getElementById('setupMemberList');
-    if (!list) return;
-    list.innerHTML = this.setupMemberRows.map((m, i) => {
-      const av = AVATARS.find(a => a.id === m.avatarId) || AVATARS[0];
-      return `
+  renderSetupRows() {
+    const container = document.getElementById('setupMembersList');
+    if (!container) return;
+    container.innerHTML = this.setupMemberRows.map((row, i) => `
       <div class="setup-member-row" data-index="${i}">
-        <button type="button" class="avatar-picker" data-index="${i}"><img src="${av.img}" alt="${av.label}" class="avatar-img"></button>
-        <input type="text" value="${m.name}" placeholder="Tên thành viên" class="setup-member-name" data-index="${i}">
-        ${this.setupMemberRows.length > 1 ? `<button type="button" class="remove-member-btn" data-index="${i}">✕</button>` : ''}
-      </div>`;
-    }).join('');
+        <button type="button" class="avatar-select-btn" data-index="${i}">
+          <img src="${row.avatarImg}" alt="Avatar" class="avatar-img">
+        </button>
+        <input type="text" class="setup-member-name" value="${row.name}" placeholder="Tên thành viên" required>
+        ${this.setupMemberRows.length > 1 ? `<button type="button" class="btn-remove-member" data-index="${i}">✕</button>` : ''}
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.avatar-select-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt(btn.dataset.index);
+        this.showAvatarPicker(idx, btn);
+      });
+    });
+
+    container.querySelectorAll('.setup-member-name').forEach((input, idx) => {
+      input.addEventListener('input', (e) => {
+        this.setupMemberRows[idx].name = e.target.value;
+      });
+    });
+
+    container.querySelectorAll('.btn-remove-member').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.index);
+        this.setupMemberRows.splice(idx, 1);
+        this.renderSetupRows();
+      });
+    });
   },
 
   handleSetupSubmit(e) {
     e.preventDefault();
-    const familyName = document.getElementById('familyName')?.value?.trim();
-    if (!familyName) { this.showToast('Vui lòng nhập tên gia đình', 'error'); return; }
-
-    // Collect member data from inputs
-    const nameInputs = document.querySelectorAll('.setup-member-name');
+    const familyName = document.getElementById('setupFamilyName').value.trim() || 'Gia đình';
     const members = [];
     this.setupMemberRows.forEach((row, i) => {
-      const name = nameInputs[i]?.value?.trim();
-      if (name) {
-        const av = AVATARS.find(a => a.id === row.avatarId) || AVATARS[i % AVATARS.length];
+      if (row.name.trim()) {
+        const av = AVATARS.find(a => a.id === row.avatarId) || AVATARS[0];
         members.push({
-          name,
+          id: generateId(),
+          name: row.name.trim(),
           avatarId: row.avatarId,
           avatar: av.emoji,
           avatarImg: av.img,
@@ -240,6 +273,7 @@ const App = {
     switch(this.currentPage) {
       case 'dashboard': this.renderDashboard(); break;
       case 'budget': this.renderBudgetPage(); break;
+      case 'savings': this.renderSavingsPage(); break;
       case 'transactions': this.renderTransactions(); break;
       case 'loans': this.renderLoans(); break;
       case 'analytics': this.renderAnalytics(); break;
@@ -313,6 +347,211 @@ const App = {
     transactions = this.filterTransactionsByScope(transactions, this.budgetScope);
 
     this.renderBudgetSummary(transactions, this.budgetMonth, this.budgetScope);
+  },
+
+  // ==================== SAVINGS & GOALS PAGE ====================
+  renderSavingsPage() {
+    this.renderScopeSelector('savingsScopeToggle', this.savingsScope, (scope) => {
+      this.savingsScope = scope;
+      this.renderSavingsPage();
+    });
+
+    const allGoals = Storage.getSavingsGoals();
+    let goals = allGoals;
+    if (this.savingsScope === 'family') {
+      goals = allGoals.filter(g => !g.memberId || g.memberId === 'family');
+    } else if (this.savingsScope !== 'all') {
+      goals = allGoals.filter(g => g.memberId === this.savingsScope);
+    }
+
+    // Stats calculations
+    let totalCurrent = 0;
+    let totalTarget = 0;
+    goals.forEach(g => {
+      totalCurrent += (g.currentAmount || 0);
+      totalTarget += (g.targetAmount || 0);
+    });
+    const overallPercent = totalTarget > 0 ? Math.round((totalCurrent / totalTarget) * 100) : 0;
+
+    // This month's deposits
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth() + 1;
+    const allLogs = Storage.getSavingsLogs();
+    let thisMonthAdded = 0;
+    allLogs.forEach(l => {
+      if (l.date && l.type === 'deposit') {
+        const d = new Date(l.date);
+        if (d.getFullYear() === curYear && (d.getMonth() + 1) === curMonth) {
+          if (this.savingsScope === 'all') thisMonthAdded += l.amount;
+          else if (this.savingsScope === 'family' && (!l.memberId || l.memberId === 'family')) thisMonthAdded += l.amount;
+          else if (l.memberId === this.savingsScope) thisMonthAdded += l.amount;
+        }
+      }
+    });
+
+    // Render Stats Banner
+    const banner = document.getElementById('savingsOverviewBanner');
+    if (banner) {
+      banner.innerHTML = `
+        <div class="savings-stats-row">
+          <div class="savings-stat-card">
+            <span class="savings-stat-title">💎 Tổng tài sản tích lũy</span>
+            <span class="savings-stat-val">${formatCurrency(totalCurrent)}</span>
+          </div>
+          <div class="savings-stat-card">
+            <span class="savings-stat-title">🌱 Nạp thêm tháng ${curMonth}</span>
+            <span class="savings-stat-val">+${formatCurrency(thisMonthAdded)}</span>
+          </div>
+          <div class="savings-stat-card">
+            <span class="savings-stat-title">🎯 Tiến độ tổng thể</span>
+            <span class="savings-stat-val" style="color:var(--primary);">${overallPercent}%</span>
+          </div>
+        </div>
+
+        <div class="budget-progress-track" style="height:9px; margin-top:4px;">
+          <div class="budget-progress-fill safe" style="width: ${Math.min(overallPercent, 100)}%;"></div>
+        </div>
+      `;
+    }
+
+    // Render Goals Grid
+    const grid = document.getElementById('savingsGoalsGrid');
+    if (grid) {
+      if (goals.length === 0) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;"><span class="empty-icon">🐷</span><p>Chưa có hũ tiết kiệm nào</p><p class="text-muted">Bấm "+ Tạo hũ tiết kiệm" để bắt đầu tích lũy</p></div>`;
+      } else {
+        grid.innerHTML = goals.map(g => {
+          const cur = g.currentAmount || 0;
+          const tar = g.targetAmount || 0;
+          const pct = tar > 0 ? Math.round((cur / tar) * 100) : 0;
+          const member = g.memberId && g.memberId !== 'family' ? Storage.getMemberById(g.memberId) : null;
+          const memberName = member ? member.name : 'Cả nhà';
+          const memberImg = member ? (member.avatarImg || (AVATARS.find(a => a.id === member.avatarId) || AVATARS[0]).img) : '';
+
+          let dateLabel = '';
+          if (g.targetDate) {
+            const parts = g.targetDate.split('-');
+            if (parts.length >= 2) dateLabel = `📅 Hạn: Th${parseInt(parts[1])}/${parts[0]}`;
+          }
+
+          return `
+            <div class="savings-goal-card" data-goal-id="${g.id}">
+              <div class="savings-card-header">
+                <div class="savings-card-title-box">
+                  <div class="savings-card-emoji">${g.emoji || '🐷'}</div>
+                  <div>
+                    <div class="savings-card-name">${g.name}</div>
+                    <div class="savings-card-member">
+                      ${member ? `<img src="${memberImg}" class="avatar-img-xs">` : '👨‍👩‍👧‍👦'} ${memberName}
+                    </div>
+                  </div>
+                </div>
+                <div style="display:flex; gap:4px;">
+                  <button class="btn-savings-icon edit-goal-btn" data-id="${g.id}" title="Sửa mục tiêu">✏️</button>
+                  <button class="btn-savings-icon delete-goal-btn" data-id="${g.id}" title="Xóa hũ">🗑️</button>
+                </div>
+              </div>
+
+              <div class="savings-card-amounts">
+                <span class="savings-current-val">${formatCurrency(cur)}</span>
+                <span class="savings-target-val">/ ${formatCurrency(tar)}</span>
+              </div>
+
+              <div class="budget-progress-track">
+                <div class="budget-progress-fill ${pct >= 100 ? 'safe' : (pct >= 50 ? 'warning' : '')}" style="width: ${Math.min(pct, 100)}%;"></div>
+              </div>
+
+              <div class="savings-card-meta">
+                <span class="budget-cat-percent ${pct >= 100 ? 'safe' : (pct >= 50 ? 'warning' : 'safe')}">${pct}%</span>
+                ${dateLabel ? `<span class="savings-target-badge">${dateLabel}</span>` : ''}
+              </div>
+
+              <div class="savings-card-actions">
+                <button class="btn-savings-deposit deposit-btn" data-id="${g.id}">
+                  <span>➕</span> Nạp tiền
+                </button>
+                <button class="btn-savings-withdraw withdraw-btn" data-id="${g.id}">
+                  <span>➖</span> Rút tiền
+                </button>
+                <button class="btn-savings-icon history-btn" data-id="${g.id}" title="Xem lịch sử">
+                  <span>📜</span>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Bind goal card action buttons
+        grid.querySelectorAll('.edit-goal-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.openSavingsGoalModal(btn.dataset.id);
+          });
+        });
+        grid.querySelectorAll('.delete-goal-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deleteSavingsGoal(btn.dataset.id);
+          });
+        });
+        grid.querySelectorAll('.deposit-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.openSavingsActionModal(btn.dataset.id, 'deposit');
+          });
+        });
+        grid.querySelectorAll('.withdraw-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.openSavingsActionModal(btn.dataset.id, 'withdraw');
+          });
+        });
+        grid.querySelectorAll('.history-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.openSavingsHistoryModal(btn.dataset.id);
+          });
+        });
+      }
+    }
+
+    // Render Recent Logs
+    const logsContainer = document.getElementById('savingsRecentLogs');
+    if (logsContainer) {
+      let logs = allLogs;
+      if (this.savingsScope === 'family') {
+        logs = allLogs.filter(l => !l.memberId || l.memberId === 'family');
+      } else if (this.savingsScope !== 'all') {
+        logs = allLogs.filter(l => l.memberId === this.savingsScope);
+      }
+
+      const recent = logs.slice(0, 10);
+      if (recent.length === 0) {
+        logsContainer.innerHTML = `<div class="empty-state"><span class="empty-icon">📝</span><p>Chưa có giao dịch nạp/rút tiết kiệm nào</p></div>`;
+      } else {
+        logsContainer.innerHTML = recent.map(l => {
+          const isDep = l.type === 'deposit';
+          const member = l.memberId && l.memberId !== 'family' ? Storage.getMemberById(l.memberId) : null;
+          const memberText = member ? ` · 👤 ${member.name}` : ' · 👨‍👩‍👧‍👦 Cả nhà';
+
+          return `
+            <div class="savings-log-item">
+              <div class="savings-log-left">
+                <span class="savings-log-badge ${l.type}">${isDep ? 'Nạp tiền' : 'Rút tiền'}</span>
+                <div class="savings-log-info">
+                  <div class="savings-log-title">${l.goalName || 'Tiết kiệm'}${l.note ? ' · ' + l.note : ''}</div>
+                  <div class="savings-log-sub">${formatDate(l.date)}${memberText}</div>
+                </div>
+              </div>
+              <div class="savings-log-amount ${l.type}">
+                ${isDep ? '+' : '-'}${formatCurrency(l.amount)}
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
   },
 
   // ==================== SYNC ====================
@@ -1418,22 +1657,6 @@ const App = {
         <div class="budget-daily-allowance-box">
           <span>${adviceText}</span>
         </div>
-
-        ${savingsGoal > 0 ? `
-          <div class="savings-goal-banner">
-            <div class="savings-goal-header">
-              <div style="display:flex; align-items:center; gap:6px;">
-                <span>🎯</span>
-                <span style="color:var(--income); font-weight:700;">Mục tiêu Tiết kiệm:</span>
-                <span>${formatCurrency(actualSavings)} / ${formatCurrency(savingsGoal)}</span>
-              </div>
-              <span class="budget-cat-percent safe">${savingsProgress}%</span>
-            </div>
-            <div class="budget-progress-track" style="height:6px;">
-              <div class="budget-progress-fill safe" style="width: ${Math.min(savingsProgress, 100)}%;"></div>
-            </div>
-          </div>
-        ` : ''}
       `;
     }
 
@@ -1702,6 +1925,282 @@ const App = {
     this.updateBudgetModalTotal();
   },
 
+  // ==================== SAVINGS MODALS & ACTIONS ====================
+  openSavingsGoalModal(editId = null) {
+    this.editingSavingsGoalId = editId;
+    const modal = document.getElementById('savingsGoalModal');
+    const form = document.getElementById('savingsGoalForm');
+    if (!modal || !form) return;
+    form.reset();
+
+    const titleEl = document.getElementById('savingsGoalModalTitle');
+    const emojiBtn = document.getElementById('savingsGoalEmojiBtn');
+    const emojiPalette = document.getElementById('savingsEmojiPalette');
+    const nameInput = document.getElementById('savingsGoalName');
+    const targetInput = document.getElementById('savingsTargetAmount');
+    const initialInput = document.getElementById('savingsInitialAmount');
+    const dateInput = document.getElementById('savingsTargetDate');
+    const memberSelect = document.getElementById('savingsMemberSelect');
+
+    // Fill members select
+    if (memberSelect) {
+      const members = Storage.getMembers();
+      memberSelect.innerHTML = `
+        <option value="family">👨‍👩‍👧‍👦 Cả nhà</option>
+        ${members.map(m => `<option value="${m.id}">👤 ${m.name}</option>`).join('')}
+      `;
+    }
+
+    let selectedEmoji = '🐷';
+    if (emojiBtn) emojiBtn.textContent = selectedEmoji;
+    if (emojiPalette) {
+      emojiPalette.style.display = 'none';
+      emojiPalette.innerHTML = ['🐷','🏦','💰','🪙','💎','🚗','🏠','✈️','👶','🎓','🛡️','💍','🏖️','🎁','🖥️','📱','🩺','📈','🌳','⭐'].map(em => `
+        <div class="cat-emoji-item" data-emoji="${em}">${em}</div>
+      `).join('');
+      emojiPalette.onclick = (e) => {
+        const item = e.target.closest('.cat-emoji-item');
+        if (item) {
+          selectedEmoji = item.dataset.emoji;
+          if (emojiBtn) emojiBtn.textContent = selectedEmoji;
+          emojiPalette.style.display = 'none';
+        }
+      };
+    }
+    if (emojiBtn) {
+      emojiBtn.onclick = () => {
+        if (emojiPalette) {
+          emojiPalette.style.display = emojiPalette.style.display === 'none' ? 'flex' : 'none';
+        }
+      };
+    }
+
+    if (editId) {
+      const goal = Storage.getSavingsGoalById(editId);
+      if (goal) {
+        if (titleEl) titleEl.textContent = 'Sửa Hũ Tiết Kiệm';
+        document.getElementById('savingsGoalId').value = editId;
+        if (nameInput) nameInput.value = goal.name;
+        if (targetInput) targetInput.value = formatNumberInput(goal.targetAmount);
+        if (initialInput) initialInput.value = formatNumberInput(goal.currentAmount);
+        if (dateInput) dateInput.value = goal.targetDate || '';
+        if (memberSelect) memberSelect.value = goal.memberId || 'family';
+        selectedEmoji = goal.emoji || '🐷';
+        if (emojiBtn) emojiBtn.textContent = selectedEmoji;
+      }
+    } else {
+      if (titleEl) titleEl.textContent = 'Tạo Hũ Tiết Kiệm Mới';
+      document.getElementById('savingsGoalId').value = '';
+    }
+
+    modal.classList.add('active');
+  },
+
+  closeSavingsGoalModal() {
+    document.getElementById('savingsGoalModal')?.classList.remove('active');
+    this.editingSavingsGoalId = null;
+  },
+
+  handleSavingsGoalSubmit(e) {
+    e.preventDefault();
+    const id = document.getElementById('savingsGoalId')?.value;
+    const name = document.getElementById('savingsGoalName')?.value.trim();
+    const emoji = document.getElementById('savingsGoalEmojiBtn')?.textContent || '🐷';
+    const targetAmount = parseNumberInput(document.getElementById('savingsTargetAmount')?.value);
+    const initialAmount = parseNumberInput(document.getElementById('savingsInitialAmount')?.value);
+    const targetDate = document.getElementById('savingsTargetDate')?.value;
+    const memberId = document.getElementById('savingsMemberSelect')?.value || 'family';
+
+    if (!name) {
+      this.showToast('Vui lòng nhập tên mục tiêu', 'error');
+      return;
+    }
+    if (targetAmount <= 0) {
+      this.showToast('Vui lòng nhập số tiền mục tiêu hợp lệ', 'error');
+      return;
+    }
+
+    if (id) {
+      Storage.updateSavingsGoal(id, {
+        name,
+        emoji,
+        targetAmount,
+        currentAmount: initialAmount,
+        targetDate,
+        memberId
+      });
+      this.showToast('Đã cập nhật hũ tiết kiệm ✨');
+    } else {
+      Storage.addSavingsGoal({
+        name,
+        emoji,
+        targetAmount,
+        currentAmount: initialAmount,
+        targetDate,
+        memberId
+      });
+      this.showToast(`Đã tạo hũ ${emoji} ${name} 🎉`);
+    }
+
+    this.closeSavingsGoalModal();
+    this.renderSavingsPage();
+  },
+
+  deleteSavingsGoal(id) {
+    const goal = Storage.getSavingsGoalById(id);
+    if (!goal) return;
+    if (confirm(`Bạn có chắc muốn xóa hũ "${goal.name}" và toàn bộ lịch sử nạp/rút của hũ này?`)) {
+      Storage.deleteSavingsGoal(id);
+      this.renderSavingsPage();
+      this.showToast(`Đã xóa hũ ${goal.name}`);
+    }
+  },
+
+  openSavingsActionModal(goalId, actionType = 'deposit') {
+    const goal = Storage.getSavingsGoalById(goalId);
+    if (!goal) return;
+    const modal = document.getElementById('savingsActionModal');
+    const form = document.getElementById('savingsActionForm');
+    if (!modal || !form) return;
+    form.reset();
+
+    document.getElementById('savingsActionGoalId').value = goalId;
+    document.getElementById('savingsActionType').value = actionType;
+
+    const titleEl = document.getElementById('savingsActionTitle');
+    const subEl = document.getElementById('savingsActionSubtitle');
+    const submitBtn = document.getElementById('savingsActionSubmitBtn');
+    const amountInput = document.getElementById('savingsActionAmount');
+    const memberSelect = document.getElementById('savingsActionMember');
+    const dateInput = document.getElementById('savingsActionDate');
+
+    if (titleEl) titleEl.textContent = actionType === 'deposit' ? '➕ Nạp tiền vào Hũ' : '➖ Rút tiền từ Hũ';
+    if (subEl) subEl.textContent = `${goal.emoji} ${goal.name} (Hiện có: ${formatCurrency(goal.currentAmount || 0)})`;
+    if (submitBtn) {
+      submitBtn.textContent = actionType === 'deposit' ? 'Xác nhận Nạp tiền' : 'Xác nhận Rút tiền';
+      submitBtn.style.background = actionType === 'deposit' ? 'var(--income)' : 'var(--expense)';
+    }
+
+    if (memberSelect) {
+      const members = Storage.getMembers();
+      memberSelect.innerHTML = `
+        <option value="family">👨‍👩‍👧‍👦 Cả nhà</option>
+        ${members.map(m => `<option value="${m.id}">👤 ${m.name}</option>`).join('')}
+      `;
+      if (goal.memberId && goal.memberId !== 'family') {
+        memberSelect.value = goal.memberId;
+      }
+    }
+
+    if (dateInput) {
+      dateInput.value = new Date().toISOString().slice(0, 10);
+    }
+
+    modal.classList.add('active');
+    setTimeout(() => amountInput?.focus(), 50);
+  },
+
+  closeSavingsActionModal() {
+    document.getElementById('savingsActionModal')?.classList.remove('active');
+  },
+
+  handleSavingsActionSubmit(e) {
+    e.preventDefault();
+    const goalId = document.getElementById('savingsActionGoalId')?.value;
+    const actionType = document.getElementById('savingsActionType')?.value;
+    const amount = parseNumberInput(document.getElementById('savingsActionAmount')?.value);
+    const memberId = document.getElementById('savingsActionMember')?.value;
+    const date = document.getElementById('savingsActionDate')?.value;
+    const note = document.getElementById('savingsActionNote')?.value.trim();
+
+    if (!amount || amount <= 0) {
+      this.showToast('Vui lòng nhập số tiền hợp lệ', 'error');
+      return;
+    }
+
+    try {
+      Storage.addSavingsAction(goalId, {
+        type: actionType,
+        amount,
+        memberId,
+        date,
+        note
+      });
+
+      this.closeSavingsActionModal();
+      this.renderSavingsPage();
+      this.showToast(actionType === 'deposit' ? `Đã nạp +${formatCurrency(amount)} vào hũ! 🌱` : `Đã rút -${formatCurrency(amount)} từ hũ! 💸`);
+    } catch(err) {
+      this.showToast(err.message || 'Lỗi xử lý', 'error');
+    }
+  },
+
+  openSavingsHistoryModal(goalId) {
+    const goal = Storage.getSavingsGoalById(goalId);
+    if (!goal) return;
+    const modal = document.getElementById('savingsHistoryModal');
+    if (!modal) return;
+
+    const titleEl = document.getElementById('savingsHistoryTitle');
+    const subEl = document.getElementById('savingsHistorySubtitle');
+    const summaryEl = document.getElementById('savingsHistorySummary');
+    const listEl = document.getElementById('savingsHistoryList');
+
+    if (titleEl) titleEl.textContent = `Lịch sử: ${goal.emoji} ${goal.name}`;
+    if (subEl) subEl.textContent = `Mục tiêu: ${formatCurrency(goal.targetAmount)} · Hiện có: ${formatCurrency(goal.currentAmount || 0)}`;
+
+    const logs = Storage.getSavingsLogs(goalId);
+
+    if (summaryEl) {
+      let totalDep = 0;
+      let totalWith = 0;
+      logs.forEach(l => {
+        if (l.type === 'deposit') totalDep += l.amount;
+        else if (l.type === 'withdraw') totalWith += l.amount;
+      });
+
+      summaryEl.innerHTML = `
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:10px; background:var(--surface); border:1px solid var(--border); border-radius:10px; margin-bottom:10px;">
+          <div style="font-size:0.8rem;"><span class="text-muted">Tổng đã nạp:</span> <strong style="color:var(--income);">+${formatCurrency(totalDep)}</strong></div>
+          <div style="font-size:0.8rem; text-align:right;"><span class="text-muted">Tổng đã rút:</span> <strong style="color:var(--expense);">-${formatCurrency(totalWith)}</strong></div>
+        </div>
+      `;
+    }
+
+    if (listEl) {
+      if (logs.length === 0) {
+        listEl.innerHTML = `<div class="empty-state"><p>Chưa có lịch sử giao dịch nào cho hũ này</p></div>`;
+      } else {
+        listEl.innerHTML = logs.map(l => {
+          const isDep = l.type === 'deposit';
+          const member = l.memberId && l.memberId !== 'family' ? Storage.getMemberById(l.memberId) : null;
+          const memberText = member ? ` · 👤 ${member.name}` : ' · 👨‍👩‍👧‍👦 Cả nhà';
+
+          return `
+            <div class="savings-log-item">
+              <div class="savings-log-left">
+                <span class="savings-log-badge ${l.type}">${isDep ? 'Nạp tiền' : 'Rút tiền'}</span>
+                <div class="savings-log-info">
+                  <div class="savings-log-title">${l.note || (isDep ? 'Nạp tiền tích lũy' : 'Rút tiền chi tiêu')}</div>
+                  <div class="savings-log-sub">${formatDate(l.date)}${memberText}</div>
+                </div>
+              </div>
+              <div class="savings-log-amount ${l.type}">
+                ${isDep ? '+' : '-'}${formatCurrency(l.amount)}
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    modal.classList.add('active');
+  },
+
+  closeSavingsHistoryModal() {
+    document.getElementById('savingsHistoryModal')?.classList.remove('active');
+  },
+
   // ==================== LOAN MODAL ====================
   openLoanModal(editId = null) {
     this.editingLoanId = editId;
@@ -1865,7 +2364,7 @@ const App = {
     document.getElementById('analyticsNextMonth')?.addEventListener('click', () => { this.analyticsMonth=navigateMonth(this.analyticsMonth.year,this.analyticsMonth.month,1); this.renderAnalytics(); });
     
     // Currency inputs auto-formatter (e.g. 5000 -> 5.000)
-    ['amount', 'loanPrincipal', 'loanMonthly'].forEach(id => {
+    ['amount', 'loanPrincipal', 'loanMonthly', 'savingsTargetAmount', 'savingsInitialAmount', 'savingsActionAmount'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.addEventListener('input', (e) => {
@@ -1873,6 +2372,19 @@ const App = {
         });
       }
     });
+
+    // Savings page & modals
+    document.getElementById('openAddSavingsGoalBtn')?.addEventListener('click', () => this.openSavingsGoalModal());
+    document.getElementById('savingsGoalModalClose')?.addEventListener('click', () => this.closeSavingsGoalModal());
+    document.getElementById('savingsGoalModal')?.addEventListener('click', (e) => { if (e.target.id === 'savingsGoalModal') this.closeSavingsGoalModal(); });
+    document.getElementById('savingsGoalForm')?.addEventListener('submit', (e) => this.handleSavingsGoalSubmit(e));
+    
+    document.getElementById('savingsActionClose')?.addEventListener('click', () => this.closeSavingsActionModal());
+    document.getElementById('savingsActionModal')?.addEventListener('click', (e) => { if (e.target.id === 'savingsActionModal') this.closeSavingsActionModal(); });
+    document.getElementById('savingsActionForm')?.addEventListener('submit', (e) => this.handleSavingsActionSubmit(e));
+
+    document.getElementById('savingsHistoryClose')?.addEventListener('click', () => this.closeSavingsHistoryModal());
+    document.getElementById('savingsHistoryModal')?.addEventListener('click', (e) => { if (e.target.id === 'savingsHistoryModal') this.closeSavingsHistoryModal(); });
 
     // Transaction modal
     document.getElementById('addTransactionBtn')?.addEventListener('click', (e) => { e.stopPropagation(); this.openModal(); });

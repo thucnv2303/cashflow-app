@@ -9,7 +9,7 @@
   <title>CashFlow - Quản lý chi tiêu</title>
   <meta name="description" content="Ứng dụng quản lý tài chính gia đình thông minh, theo dõi thu chi chuyên nghiệp">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=2.8.1">
+  <link rel="stylesheet" href="css/style.css?v=3.0">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
@@ -53,6 +53,10 @@
         <li class="nav-item" data-page="budget">
           <span class="nav-icon">🎯</span>
           <span class="nav-label">Ngân sách</span>
+        </li>
+        <li class="nav-item" data-page="savings">
+          <span class="nav-icon">🐷</span>
+          <span class="nav-label">Tiết kiệm</span>
         </li>
         <li class="nav-item" data-page="transactions">
           <span class="nav-icon">📋</span>
@@ -249,6 +253,56 @@
           </div>
           <div class="budget-categories-list" id="budgetCategoriesList">
             <!-- JS renders interactive category budget cards -->
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE: Savings & Goals -->
+      <section class="page" id="page-savings">
+        <div class="page-header">
+          <div>
+            <h1>🐷 Tiết kiệm & Tích lũy</h1>
+            <span class="text-muted" style="font-size: 0.8rem;">Quản lý các hũ tiết kiệm & mục tiêu tài sản gia đình</span>
+          </div>
+          <div class="header-actions">
+            <button class="btn-primary" id="openAddSavingsGoalBtn">
+              <span>+</span> Tạo hũ tiết kiệm
+            </button>
+          </div>
+        </div>
+
+        <!-- Scope selector -->
+        <div class="scope-toggle-container">
+          <div class="scope-toggle" id="savingsScopeToggle">
+            <!-- JS renders dynamic member buttons -->
+          </div>
+        </div>
+
+        <!-- Overall Savings Stats Banner -->
+        <div class="savings-overview-banner" id="savingsOverviewBanner">
+          <!-- JS renders total assets, this month added, overall % -->
+        </div>
+
+        <!-- Savings Goals Grid -->
+        <div class="chart-card" style="margin-top: 16px;">
+          <div class="card-header">
+            <div>
+              <h3>Danh sách Hũ / Sổ Tiết Kiệm</h3>
+              <span class="text-muted" style="font-size: 0.78rem;">Bấm vào từng hũ để xem lịch sử nạp / rút tiền</span>
+            </div>
+          </div>
+          <div class="savings-goals-grid" id="savingsGoalsGrid">
+            <!-- JS renders savings goal cards -->
+          </div>
+        </div>
+
+        <!-- Recent Savings Logs -->
+        <div class="chart-card" style="margin-top: 16px;">
+          <div class="card-header">
+            <h3>📜 Nhật ký Tích lũy gần đây</h3>
+          </div>
+          <div class="savings-recent-logs" id="savingsRecentLogs">
+            <!-- JS renders recent logs -->
           </div>
         </div>
       </section>
@@ -677,15 +731,6 @@
             <button class="btn-close" id="budgetModalClose">✕</button>
           </div>
 
-          <!-- Savings Goal Input Box -->
-          <div class="savings-goal-setting-box">
-            <div class="savings-goal-label">
-              <span>🎯 Mục tiêu Tiết kiệm tháng (₫)</span>
-              <small class="text-muted">Kế hoạch tích lũy dự kiến</small>
-            </div>
-            <input type="text" id="budgetSavingsGoalInput" class="savings-goal-input" placeholder="VD: 5.000.000" inputmode="numeric">
-          </div>
-
           <div class="budget-modal-presets" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Hạn mức từng Danh mục:</span>
             <div style="display: flex; gap: 6px;">
@@ -695,7 +740,7 @@
           </div>
 
           <form id="budgetForm" class="budget-form">
-            <div class="budget-form-items" id="budgetFormItems" style="max-height: 38vh; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 8px;">
+            <div class="budget-form-items" id="budgetFormItems" style="max-height: 44vh; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 8px;">
               <!-- JS renders input for each expense category (default + custom with delete button) -->
             </div>
 
@@ -731,6 +776,122 @@
           </form>
         </div>
       </div>
+
+    <!-- Savings Goal Modal (Create / Edit) -->
+    <div class="modal-overlay" id="savingsGoalModal">
+      <div class="modal savings-goal-modal">
+        <div class="modal-header">
+          <div>
+            <h2 id="savingsGoalModalTitle">Tạo Hũ Tiết Kiệm Mới</h2>
+            <span class="text-muted" style="font-size: 0.78rem;">Đặt mục tiêu tích lũy cho gia đình hoặc cá nhân</span>
+          </div>
+          <button class="btn-close" id="savingsGoalModalClose">✕</button>
+        </div>
+        <form id="savingsGoalForm">
+          <input type="hidden" id="savingsGoalId">
+          <div class="form-row" style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+            <button type="button" class="emoji-picker-btn" id="savingsGoalEmojiBtn" style="font-size:1.4rem; width:44px; height:44px; border-radius:10px; border:1px solid var(--border); background:var(--surface); cursor:pointer;">🐷</button>
+            <div class="form-group" style="flex:1; margin-bottom:0;">
+              <label for="savingsGoalName">Tên mục tiêu</label>
+              <input type="text" id="savingsGoalName" placeholder="VD: Quỹ khẩn cấp, Mua xe..." required>
+            </div>
+          </div>
+
+          <!-- Preset Emojis Palette -->
+          <div class="cat-emoji-palette" id="savingsEmojiPalette" style="display:none; gap:6px; flex-wrap:wrap; padding:8px; background:var(--surface); border:1px solid var(--border); border-radius:8px; margin-bottom:10px;">
+            <!-- JS fills emojis -->
+          </div>
+
+          <div class="form-row" style="margin-bottom:10px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label for="savingsTargetAmount">Số tiền mục tiêu (₫)</label>
+              <input type="text" id="savingsTargetAmount" placeholder="VD: 50.000.000" inputmode="numeric" required>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label for="savingsInitialAmount">Số tiền hiện có ban đầu (₫)</label>
+              <input type="text" id="savingsInitialAmount" placeholder="0" inputmode="numeric">
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-bottom:10px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label for="savingsTargetDate">Hạn hoàn thành (dự kiến)</label>
+              <input type="date" id="savingsTargetDate">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label for="savingsMemberSelect">Dành cho ai</label>
+              <select id="savingsMemberSelect" style="width:100%; padding:9px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface); color:var(--text-primary);">
+                <option value="family">👨‍👩‍👧‍👦 Cả nhà</option>
+                <!-- JS fills members -->
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary btn-submit" style="margin-top:12px; width:100%;">Lưu hũ tiết kiệm</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Savings Action Modal (Deposit / Withdraw) -->
+    <div class="modal-overlay" id="savingsActionModal">
+      <div class="modal savings-action-modal">
+        <div class="modal-header">
+          <div>
+            <h2 id="savingsActionTitle">Nạp tiền vào Hũ</h2>
+            <span class="text-muted" id="savingsActionSubtitle" style="font-size: 0.78rem;">Hũ tiết kiệm</span>
+          </div>
+          <button class="btn-close" id="savingsActionClose">✕</button>
+        </div>
+        <form id="savingsActionForm">
+          <input type="hidden" id="savingsActionGoalId">
+          <input type="hidden" id="savingsActionType" value="deposit">
+
+          <div class="form-group" style="margin-bottom:10px;">
+            <label for="savingsActionAmount">Số tiền (₫)</label>
+            <input type="text" id="savingsActionAmount" placeholder="VD: 2.000.000" inputmode="numeric" required style="font-size:1.2rem; font-weight:700; color:var(--primary);">
+          </div>
+
+          <div class="form-row" style="margin-bottom:10px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label for="savingsActionMember">Người thực hiện</label>
+              <select id="savingsActionMember" style="width:100%; padding:9px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface); color:var(--text-primary);">
+                <!-- JS fills members -->
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label for="savingsActionDate">Ngày</label>
+              <input type="date" id="savingsActionDate" required>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:12px;">
+            <label for="savingsActionNote">Ghi chú</label>
+            <input type="text" id="savingsActionNote" placeholder="VD: Trích lương tháng 8, Tiền thưởng...">
+          </div>
+
+          <button type="submit" class="btn-primary btn-submit" id="savingsActionSubmitBtn" style="width:100%;">Xác nhận</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Savings History Modal -->
+    <div class="modal-overlay" id="savingsHistoryModal">
+      <div class="modal savings-history-modal">
+        <div class="modal-header">
+          <div>
+            <h2 id="savingsHistoryTitle">Lịch sử Nạp / Rút</h2>
+            <span class="text-muted" id="savingsHistorySubtitle" style="font-size: 0.78rem;">Nhật ký tích lũy</span>
+          </div>
+          <button class="btn-close" id="savingsHistoryClose">✕</button>
+        </div>
+        <div class="savings-history-summary" id="savingsHistorySummary">
+          <!-- JS fills goal summary -->
+        </div>
+        <div class="savings-history-list" id="savingsHistoryList" style="max-height: 50vh; overflow-y: auto; margin-top: 10px;">
+          <!-- JS fills log items -->
+        </div>
+      </div>
+    </div>
 
     <!-- KPI Drilldown Modal -->
     <div class="modal-overlay" id="kpiDrilldownModal">
@@ -847,9 +1008,9 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/utils.js?v=2.8.1"></script>
-  <script src="js/storage.js?v=2.8.1"></script>
-  <script src="js/charts.js?v=2.8.1"></script>
-  <script src="js/app.js?v=2.8.1"></script>
+  <script src="js/utils.js?v=3.0"></script>
+  <script src="js/storage.js?v=3.0"></script>
+  <script src="js/charts.js?v=3.0"></script>
+  <script src="js/app.js?v=3.0"></script>
 </body>
 </html>

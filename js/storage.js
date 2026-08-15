@@ -11,6 +11,14 @@ const REMINDER_KEY = 'cashflow_reminders';
 const BUDGETS_KEY = 'cashflow_budgets';
 const CUSTOM_CATS_KEY = 'cashflow_custom_categories';
 const SAVINGS_GOAL_KEY = 'cashflow_savings_goal';
+const SAVINGS_GOALS_KEY = 'cashflow_savings_goals';
+const SAVINGS_LOGS_KEY = 'cashflow_savings_logs';
+
+const DEFAULT_SAVINGS_GOALS = [
+  { id: 'goal_emergency', name: 'Quỹ khẩn cấp', emoji: '🛡️', targetAmount: 30000000, currentAmount: 5000000, targetDate: '2026-12-31', memberId: 'family', createdAt: new Date().toISOString() },
+  { id: 'goal_bank', name: 'Sổ tiết kiệm ngân hàng', emoji: '🏦', targetAmount: 50000000, currentAmount: 10000000, targetDate: '2027-06-30', memberId: 'family', createdAt: new Date().toISOString() },
+  { id: 'goal_gold', name: 'Mua vàng tích lũy', emoji: '🪙', targetAmount: 20000000, currentAmount: 0, targetDate: '2026-12-31', memberId: 'family', createdAt: new Date().toISOString() }
+];
 
 const Storage = {
   // ==================== CONFIG ====================
@@ -188,6 +196,124 @@ const Storage = {
     return this._sheetApiCall('syncCustomCats', { data: cats });
   },
 
+  // ==================== SAVINGS GOALS & LOGS CRUD ====================
+  getSavingsGoals() {
+    const raw = localStorage.getItem(SAVINGS_GOALS_KEY);
+    if (!raw) {
+      this.saveSavingsGoals(DEFAULT_SAVINGS_GOALS);
+      return DEFAULT_SAVINGS_GOALS;
+    }
+    try {
+      return JSON.parse(raw);
+    } catch(e) {
+      return [];
+    }
+  },
+  saveSavingsGoals(goals) {
+    localStorage.setItem(SAVINGS_GOALS_KEY, JSON.stringify(goals));
+    if (this.isOnline()) {
+      this.syncSavingsToSheets().catch(e => console.warn(e));
+    }
+  },
+  getSavingsGoalById(id) {
+    return this.getSavingsGoals().find(g => g.id === id) || null;
+  },
+  addSavingsGoal(goal) {
+    const goals = this.getSavingsGoals();
+    const id = 'goal_' + generateId();
+    const newGoal = {
+      id,
+      name: goal.name,
+      emoji: goal.emoji || '🐷',
+      targetAmount: Number(goal.targetAmount || 0),
+      currentAmount: Number(goal.currentAmount || 0),
+      targetDate: goal.targetDate || '',
+      memberId: goal.memberId || 'family',
+      createdAt: new Date().toISOString()
+    };
+    goals.push(newGoal);
+    this.saveSavingsGoals(goals);
+    return newGoal;
+  },
+  updateSavingsGoal(id, data) {
+    const goals = this.getSavingsGoals();
+    const idx = goals.findIndex(g => g.id === id);
+    if (idx !== -1) {
+      goals[idx] = { ...goals[idx], ...data };
+      this.saveSavingsGoals(goals);
+      return goals[idx];
+    }
+    return null;
+  },
+  deleteSavingsGoal(id) {
+    let goals = this.getSavingsGoals();
+    goals = goals.filter(g => g.id !== id);
+    this.saveSavingsGoals(goals);
+    // Also delete associated logs
+    let logs = this.getSavingsLogs();
+    logs = logs.filter(l => l.goalId !== id);
+    this.saveSavingsLogs(logs);
+  },
+  getSavingsLogs(goalId = null) {
+    const raw = localStorage.getItem(SAVINGS_LOGS_KEY);
+    let logs = [];
+    if (raw) {
+      try { logs = JSON.parse(raw); } catch(e) { logs = []; }
+    }
+    if (goalId) {
+      return logs.filter(l => l.goalId === goalId);
+    }
+    return logs;
+  },
+  saveSavingsLogs(logs) {
+    localStorage.setItem(SAVINGS_LOGS_KEY, JSON.stringify(logs));
+    if (this.isOnline()) {
+      this.syncSavingsToSheets().catch(e => console.warn(e));
+    }
+  },
+  addSavingsAction(goalId, { type, amount, memberId, date, note }) {
+    const goals = this.getSavingsGoals();
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal) throw new Error('Không tìm thấy mục tiêu tiết kiệm');
+
+    const numAmount = Number(amount || 0);
+    if (type === 'deposit') {
+      goal.currentAmount = (goal.currentAmount || 0) + numAmount;
+    } else if (type === 'withdraw') {
+      goal.currentAmount = Math.max(0, (goal.currentAmount || 0) - numAmount);
+    }
+
+    const log = {
+      id: 'slog_' + generateId(),
+      goalId,
+      goalName: goal.name,
+      type, // 'deposit' or 'withdraw'
+      amount: numAmount,
+      memberId: memberId || 'family',
+      date: date || new Date().toISOString().slice(0, 10),
+      note: note || '',
+      createdAt: new Date().toISOString()
+    };
+
+    const logs = this.getSavingsLogs();
+    logs.unshift(log);
+
+    this.saveSavingsGoals(goals);
+    this.saveSavingsLogs(logs);
+    return log;
+  },
+  async fetchSavingsFromSheets() {
+    const res = await this._sheetApiCall('getSavings');
+    if (res && res.success) return res.data;
+    throw new Error(res.error || 'Không thể lấy dữ liệu tiết kiệm từ Sheets');
+  },
+  async syncSavingsToSheets() {
+    if (!this.isOnline()) return false;
+    const goals = this.getSavingsGoals();
+    const logs = this.getSavingsLogs();
+    return this._sheetApiCall('syncSavings', { goals, logs });
+  },
+
   // ==================== TRANSACTIONS LOCAL STORAGE ====================
   getLocal() {
     const data = localStorage.getItem(STORAGE_KEY);
@@ -212,7 +338,7 @@ const Storage = {
     }
 
     try {
-      if (['syncMembers', 'syncLoans', 'syncBudgets', 'syncCustomCats', 'sync', 'add', 'update'].includes(action)) {
+      if (['syncMembers', 'syncLoans', 'syncBudgets', 'syncCustomCats', 'syncSavings', 'sync', 'add', 'update'].includes(action)) {
         try {
           const controller = new AbortController();
           const to = setTimeout(() => controller.abort(), 12000);
@@ -570,6 +696,14 @@ const Storage = {
           this.saveCustomCategories(catsData);
         }
       } catch (e) { console.warn('Sync custom cats failed:', e); }
+
+      try {
+        const savingsData = await this.fetchSavingsFromSheets();
+        if (savingsData && typeof savingsData === 'object') {
+          if (Array.isArray(savingsData.goals)) localStorage.setItem(SAVINGS_GOALS_KEY, JSON.stringify(savingsData.goals));
+          if (Array.isArray(savingsData.logs)) localStorage.setItem(SAVINGS_LOGS_KEY, JSON.stringify(savingsData.logs));
+        }
+      } catch (e) { console.warn('Sync savings failed:', e); }
 
       return true;
     } catch (e) {

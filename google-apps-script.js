@@ -57,6 +57,24 @@ function setupSheet() {
     catSheet.setFrozenRows(1);
     catSheet.getRange('A1:E1').setFontWeight('bold');
   }
+
+  // Sheet SavingsGoals
+  let savingsSheet = ss.getSheetByName('SavingsGoals');
+  if (!savingsSheet) {
+    savingsSheet = ss.insertSheet('SavingsGoals');
+    savingsSheet.appendRow(['ID', 'Tên', 'Emoji', 'Mục tiêu', 'Hiện có', 'Hạn ngày', 'Thành viên', 'Ngày tạo']);
+    savingsSheet.setFrozenRows(1);
+    savingsSheet.getRange('A1:H1').setFontWeight('bold');
+  }
+
+  // Sheet SavingsLogs
+  let logsSheet = ss.getSheetByName('SavingsLogs');
+  if (!logsSheet) {
+    logsSheet = ss.insertSheet('SavingsLogs');
+    logsSheet.appendRow(['ID', 'GoalID', 'GoalName', 'Loại', 'Số tiền', 'Thành viên', 'Ngày', 'Ghi chú', 'Ngày tạo']);
+    logsSheet.setFrozenRows(1);
+    logsSheet.getRange('A1:I1').setFontWeight('bold');
+  }
 }
 
 function getSheet(name) {
@@ -318,6 +336,81 @@ function doGet(e) {
         sheet.getRange(2, 1, rows.length, 5).setValues(rows);
       }
       return responseJson({ success: true, message: 'Đã đồng bộ danh mục tùy chỉnh' }, cb);
+    }
+
+    // ==================== SAVINGS GOALS & LOGS ====================
+    if (action === 'getSavings') {
+      const gSheet = getSheet('SavingsGoals');
+      const lSheet = getSheet('SavingsLogs');
+      const goals = [];
+      const logs = [];
+
+      if (gSheet) {
+        const data = gSheet.getDataRange().getValues();
+        for (let i = 1; i < data.length; i++) {
+          if (data[i][0]) {
+            goals.push({
+              id: String(data[i][0]),
+              name: String(data[i][1] || ''),
+              emoji: String(data[i][2] || '🐷'),
+              targetAmount: Number(data[i][3] || 0),
+              currentAmount: Number(data[i][4] || 0),
+              targetDate: String(data[i][5] || ''),
+              memberId: String(data[i][6] || 'family'),
+              createdAt: String(data[i][7] || '')
+            });
+          }
+        }
+      }
+
+      if (lSheet) {
+        const data = lSheet.getDataRange().getValues();
+        for (let i = 1; i < data.length; i++) {
+          if (data[i][0]) {
+            logs.push({
+              id: String(data[i][0]),
+              goalId: String(data[i][1] || ''),
+              goalName: String(data[i][2] || ''),
+              type: String(data[i][3] || 'deposit'),
+              amount: Number(data[i][4] || 0),
+              memberId: String(data[i][5] || 'family'),
+              date: String(data[i][6] || ''),
+              note: String(data[i][7] || ''),
+              createdAt: String(data[i][8] || '')
+            });
+          }
+        }
+      }
+
+      return responseJson({ success: true, data: { goals, logs } }, cb);
+    }
+
+    if (action === 'syncSavings') {
+      const payload = typeof e.parameter.goals === 'string' ? JSON.parse(e.parameter.goals) : e.parameter.goals;
+      const goals = Array.isArray(payload) ? payload : (e.parameter.goals ? JSON.parse(e.parameter.goals) : []);
+      const logs = e.parameter.logs ? (typeof e.parameter.logs === 'string' ? JSON.parse(e.parameter.logs) : e.parameter.logs) : [];
+
+      const gSheet = getSheet('SavingsGoals');
+      if (gSheet) {
+        const lr = gSheet.getLastRow();
+        if (lr > 1) gSheet.getRange(2, 1, lr - 1, gSheet.getLastColumn()).clearContent();
+        if (goals && goals.length > 0) {
+          const rows = goals.map(g => [g.id || '', g.name || '', g.emoji || '🐷', Number(g.targetAmount || 0), Number(g.currentAmount || 0), g.targetDate || '', g.memberId || 'family', g.createdAt || '']);
+          gSheet.getRange(2, 1, rows.length, 8).setValues(rows);
+        }
+      }
+
+      const lSheet = getSheet('SavingsLogs');
+      if (lSheet) {
+        const lr = lSheet.getLastRow();
+        if (lr > 1) lSheet.getRange(2, 1, lr - 1, lSheet.getLastColumn()).clearContent();
+        if (logs && logs.length > 0) {
+          const rows = logs.map(l => [l.id || '', l.goalId || '', l.goalName || '', l.type || 'deposit', Number(l.amount || 0), l.memberId || 'family', l.date || '', l.note || '', l.createdAt || '']);
+          lSheet.getRange(2, 1, rows.length, 9).setValues(rows);
+        }
+      }
+
+      return responseJson({ success: true, message: 'Đã đồng bộ tiết kiệm' }, cb);
     }
     
     return responseJson({ success: false, error: 'Hành động không hợp lệ' }, cb);
