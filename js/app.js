@@ -23,9 +23,9 @@ function setupSheet() {
   let memberSheet = ss.getSheetByName('Members');
   if (!memberSheet) {
     memberSheet = ss.insertSheet('Members');
-    memberSheet.appendRow(['ID','Tên','Avatar','Màu']);
+    memberSheet.appendRow(['ID','Tên','Avatar','Màu','AvatarImg','AvatarId']);
     memberSheet.setFrozenRows(1);
-    memberSheet.getRange('A1:D1').setFontWeight('bold');
+    memberSheet.getRange('A1:F1').setFontWeight('bold');
   }
 }
 function getSheet(name) {
@@ -58,8 +58,8 @@ function doGet(e) {
     if (action==='sync'){var ts=JSON.parse(e.parameter.data),s=getSheet('Transactions'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(ts&&ts.length>0){var rows=ts.map(function(t){return[t.id||'',t.type||'',t.amount||0,t.category||'',t.note||'',t.date||'',t.memberId||'',t.createdAt||''];});s.getRange(2,1,rows.length,8).setValues(rows);}return responseJson({success:true}, cb);}
     if (action==='getLoans'){var s=getSheet('Loans');if(!s)return responseJson({success:true,data:[]}, cb);var d=s.getDataRange().getValues(),r=[];for(var i=1;i<d.length;i++){if(d[i][0])r.push({id:d[i][0],name:d[i][1],emoji:d[i][2],loanType:d[i][3],principal:Number(d[i][4]),interestRate:Number(d[i][5]),termMonths:Number(d[i][6]),monthlyPayment:Number(d[i][7]),startDate:d[i][8],note:d[i][9],createdAt:d[i][10]});}return responseJson({success:true,data:r}, cb);}
     if (action==='syncLoans'){var ls=JSON.parse(e.parameter.data),s=getSheet('Loans'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(ls&&ls.length>0){var rows=ls.map(function(l){return[l.id||'',l.name||'',l.emoji||'',l.loanType||'',l.principal||0,l.interestRate||0,l.termMonths||0,l.monthlyPayment||0,l.startDate||'',l.note||'',l.createdAt||''];});s.getRange(2,1,rows.length,11).setValues(rows);}return responseJson({success:true}, cb);}
-    if (action==='getMembers'){var s=getSheet('Members');if(!s)return responseJson({success:true,data:[]}, cb);var d=s.getDataRange().getValues(),r=[];for(var i=1;i<d.length;i++){if(d[i][0])r.push({id:d[i][0],name:d[i][1],avatar:d[i][2],color:d[i][3]});}return responseJson({success:true,data:r}, cb);}
-    if (action==='syncMembers'){var ms=JSON.parse(e.parameter.data),s=getSheet('Members'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(ms&&ms.length>0){var rows=ms.map(function(m){return[m.id||'',m.name||'',m.avatar||'',m.color||''];});s.getRange(2,1,rows.length,4).setValues(rows);}return responseJson({success:true}, cb);}
+    if (action==='getMembers'){var s=getSheet('Members');if(!s)return responseJson({success:true,data:[]}, cb);var d=s.getDataRange().getValues(),r=[];for(var i=1;i<d.length;i++){if(d[i][0])r.push({id:String(d[i][0]),name:String(d[i][1]||''),avatar:String(d[i][2]||'👤'),color:String(d[i][3]||'#e77d3e'),avatarImg:String(d[i][4]||''),avatarId:String(d[i][5]||'')});}return responseJson({success:true,data:r}, cb);}
+    if (action==='syncMembers'){var ms=JSON.parse(e.parameter.data),s=getSheet('Members'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(ms&&ms.length>0){var rows=ms.map(function(m){return[m.id||'',m.name||'',m.avatar||'',m.color||'',m.avatarImg||'',m.avatarId||''];});s.getRange(2,1,rows.length,6).setValues(rows);}return responseJson({success:true}, cb);}
     return responseJson({success:false,error:'Unknown action'}, cb);
   } catch(err) {return responseJson({success:false,error:err.toString()}, cb);} finally {lock.releaseLock();}
 }`;
@@ -216,6 +216,25 @@ const App = {
   initSyncStatus() {
     this.updateSyncStatusBar();
     if (Storage.isOnline()) this.syncFromSheets(true);
+
+    // Auto-sync when user switches back to app tab
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && Storage.isOnline()) {
+        this.syncFromSheets(true);
+      }
+    });
+    window.addEventListener('focus', () => {
+      if (Storage.isOnline()) {
+        this.syncFromSheets(true);
+      }
+    });
+
+    // Periodic auto-sync every 30 seconds
+    setInterval(() => {
+      if (Storage.isOnline() && document.visibilityState === 'visible') {
+        this.syncFromSheets(true);
+      }
+    }, 30000);
   },
   updateSyncStatusBar() {
     const bar = document.getElementById('syncStatus');
@@ -232,6 +251,7 @@ const App = {
     try {
       await Storage.syncFromSheets();
       if (bar) { bar.className = 'sync-status connected'; bar.querySelector('.sync-text').textContent = '🟢 Đã đồng bộ'; }
+      this.renderFamilyAvatars();
       this.renderCurrentPage();
       if (!silent) this.showToast('Đã đồng bộ ✅');
     } catch(e) {

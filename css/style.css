@@ -1137,22 +1137,28 @@ body {
     display: none !important;
   }
   
-  /* Ultra-compact filter bar */
+  /* Filter bar with visible, compact labels */
   .filter-bar {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
-    gap: 6px !important;
-    padding: 6px 8px !important;
-    border-radius: 10px !important;
+    gap: 6px 8px !important;
+    padding: 8px 10px !important;
+    border-radius: 12px !important;
     margin-bottom: 8px !important;
   }
 
   .filter-group {
-    gap: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
   }
 
   .filter-group label {
-    display: none !important;
+    display: block !important;
+    font-size: 0.7rem !important;
+    font-weight: 600 !important;
+    color: var(--text-secondary) !important;
+    margin-bottom: 1px !important;
   }
 
   .filter-input {
@@ -1240,6 +1246,96 @@ body {
 
   .modal-overlay.active .modal {
     transform: translateY(0);
+  }
+
+  /* Non-scrollable ultra-compact Transaction Modal on mobile */
+  #transactionModal .modal {
+    padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 8px)) 14px !important;
+    max-height: 96vh !important;
+    overflow-y: hidden !important;
+  }
+
+  #transactionModal .modal-header {
+    margin-bottom: 6px !important;
+  }
+
+  #transactionModal .modal-header h2 {
+    font-size: 1.05rem !important;
+  }
+
+  #transactionModal .type-toggle {
+    margin-bottom: 6px !important;
+    padding: 2px !important;
+  }
+
+  #transactionModal .type-btn {
+    padding: 5px 8px !important;
+    font-size: 0.75rem !important;
+  }
+
+  #transactionModal .form-group {
+    margin-bottom: 5px !important;
+  }
+
+  #transactionModal .form-group label {
+    font-size: 0.7rem !important;
+    margin-bottom: 2px !important;
+  }
+
+  #transactionModal .member-selector {
+    gap: 4px !important;
+  }
+
+  #transactionModal .member-btn {
+    padding: 2px 6px !important;
+    font-size: 0.72rem !important;
+    border-radius: 10px !important;
+    gap: 4px !important;
+  }
+
+  #transactionModal .member-btn .avatar-img-sm {
+    width: 18px !important;
+    height: 18px !important;
+    margin-right: 0 !important;
+  }
+
+  #transactionModal .amount-group input {
+    font-size: 1.1rem !important;
+    height: 34px !important;
+    padding: 4px 8px !important;
+  }
+
+  #transactionModal .category-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 3px !important;
+    margin-bottom: 2px !important;
+  }
+
+  #transactionModal .category-item {
+    padding: 4px 2px !important;
+    font-size: 0.68rem !important;
+    border-radius: 8px !important;
+  }
+
+  #transactionModal .category-icon {
+    font-size: 1.1rem !important;
+  }
+
+  #transactionModal .form-row {
+    margin-bottom: 6px !important;
+    gap: 6px !important;
+  }
+
+  #transactionModal .form-row input {
+    height: 32px !important;
+    padding: 4px 6px !important;
+    font-size: 0.75rem !important;
+  }
+
+  #transactionModal .btn-submit {
+    padding: 8px !important;
+    font-size: 0.85rem !important;
+    margin-top: 4px !important;
   }
 
   .category-grid {

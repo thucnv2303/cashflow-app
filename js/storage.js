@@ -36,7 +36,7 @@ const Storage = {
     members.push(newMember);
     this.saveMembers(members);
     if (this.isOnline()) {
-      this._sheetApiCall('addMember', { data: newMember }).catch(e => console.warn(e));
+      this.syncMembersToSheets().catch(e => console.warn(e));
     }
     return newMember;
   },
@@ -47,7 +47,7 @@ const Storage = {
       members[idx] = { ...members[idx], ...data };
       this.saveMembers(members);
       if (this.isOnline()) {
-        this._sheetApiCall('updateMember', { id, data: members[idx] }).catch(e => console.warn(e));
+        this.syncMembersToSheets().catch(e => console.warn(e));
       }
       return members[idx];
     }
@@ -58,7 +58,7 @@ const Storage = {
     members = members.filter(m => m.id !== id);
     this.saveMembers(members);
     if (this.isOnline()) {
-      this._sheetApiCall('deleteMember', { id }).catch(e => console.warn(e));
+      this.syncMembersToSheets().catch(e => console.warn(e));
     }
   },
   getMemberById(id) { return this.getMembers().find(m => m.id === id); },

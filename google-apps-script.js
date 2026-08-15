@@ -35,9 +35,9 @@ function setupSheet() {
   let memberSheet = ss.getSheetByName('Members');
   if (!memberSheet) {
     memberSheet = ss.insertSheet('Members');
-    memberSheet.appendRow(['ID', 'Tên', 'Avatar', 'Màu']);
+    memberSheet.appendRow(['ID', 'Tên', 'Avatar', 'Màu', 'AvatarImg', 'AvatarId']);
     memberSheet.setFrozenRows(1);
-    memberSheet.getRange('A1:D1').setFontWeight('bold');
+    memberSheet.getRange('A1:F1').setFontWeight('bold');
   }
 }
 
@@ -187,7 +187,12 @@ function doGet(e) {
       for (let i = 1; i < data.length; i++) {
         if (data[i][0]) {
           members.push({
-            id: data[i][0], name: data[i][1], avatar: data[i][2], color: data[i][3]
+            id: String(data[i][0]),
+            name: String(data[i][1] || ''),
+            avatar: String(data[i][2] || '👤'),
+            color: String(data[i][3] || '#e77d3e'),
+            avatarImg: String(data[i][4] || ''),
+            avatarId: String(data[i][5] || '')
           });
         }
       }
@@ -197,11 +202,19 @@ function doGet(e) {
     if (action === 'syncMembers') {
       const members = JSON.parse(e.parameter.data);
       const sheet = getSheet('Members');
+      if (!sheet) return responseJson({ success: false, error: 'Sheet Members không tồn tại' }, cb);
       const lastRow = sheet.getLastRow();
       if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
       if (members && members.length > 0) {
-        const rows = members.map(m => [m.id || '', m.name || '', m.avatar || '', m.color || '']);
-        sheet.getRange(2, 1, rows.length, 4).setValues(rows);
+        const rows = members.map(m => [
+          m.id || '',
+          m.name || '',
+          m.avatar || '',
+          m.color || '',
+          m.avatarImg || '',
+          m.avatarId || ''
+        ]);
+        sheet.getRange(2, 1, rows.length, 6).setValues(rows);
       }
       return responseJson({ success: true, message: 'Đã đồng bộ thành viên' }, cb);
     }
