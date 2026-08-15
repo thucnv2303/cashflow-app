@@ -233,6 +233,9 @@ function getCategoryById(id) {
   const all = getAllCategories();
   const found = all.find(c => c.id === id);
   if (found) return found;
+  if (id.startsWith('custom_') || id.length > 15) {
+    return { id, emoji: '📦', label: 'Tùy chỉnh' };
+  }
   return { id, emoji: '📦', label: id };
 }
 

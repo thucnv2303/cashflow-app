@@ -2686,17 +2686,25 @@ const App = {
     const cat = getCategoryById(t.category);
     const member = t.memberId ? Storage.getMemberById(t.memberId) : null;
     const bene = t.beneficiaryId && t.beneficiaryId !== 'family' ? Storage.getMemberById(t.beneficiaryId) : null;
-    const memberBadge = member ? `<span class="family-avatar" style="border-color:${member.color};width:28px;height:28px;display:inline-flex"><img src="${member.avatarImg || (AVATARS.find(a => a.id === member.avatarId) || AVATARS[0]).img}" alt="${member.name}" class="avatar-img"></span>` : '';
-    const beneTag = bene ? `<span style="font-size:0.7rem;color:var(--text-secondary);margin-left:4px;">(Cho ${bene.name})</span>` : '';
+    const memberBadge = member ? `<span class="family-avatar" style="border-color:${member.color};width:24px;height:24px;display:inline-flex" title="${member.name}"><img src="${member.avatarImg || (AVATARS.find(a => a.id === member.avatarId) || AVATARS[0]).img}" alt="${member.name}" class="avatar-img"></span>` : '';
+    const beneTag = bene ? `<span style="font-size:0.68rem;color:var(--text-secondary);margin-left:2px;">(${bene.name})</span>` : '';
+    const noteMobile = t.note ? `<div class="tx-note-mobile">${t.note}</div>` : '';
+    const dateFormatted = formatDate(t.date);
+    const dateShort = t.date ? (t.date.split('-')[2] + '/' + t.date.split('-')[1]) : dateFormatted;
 
     return `<tr>
-      <td>${formatDate(t.date)}</td>
-      <td>${memberBadge}</td>
-      <td><span class="badge">${t.type==='income'?'Thu':'Chi'}</span></td>
-      <td>${cat?cat.emoji+' '+cat.label:'📦 Khác'} ${beneTag}</td>
-      <td>${t.note||'—'}</td>
-      <td class="amount-col ${t.type==='income'?'income':'expense'}">${t.type==='income'?'+':'-'}${formatCurrency(t.amount)}</td>
-      <td><div class="action-btns"><button class="edit-btn" data-id="${t.id}">✏️</button><button class="delete-btn" data-id="${t.id}">🗑️</button></div></td>
+      <td class="col-date"><span class="date-full">${dateFormatted}</span><span class="date-short">${dateShort}</span></td>
+      <td class="col-member">${memberBadge}</td>
+      <td class="col-type"><span class="badge ${t.type==='income'?'badge-income':'badge-expense'}">${t.type==='income'?'Thu':'Chi'}</span></td>
+      <td class="col-cat">
+        <div class="tx-cat-cell">
+          <span class="tx-cat-name">${cat?cat.emoji+' '+cat.label:'📦 Khác'} ${beneTag}</span>
+          ${noteMobile}
+        </div>
+      </td>
+      <td class="col-note">${t.note||'—'}</td>
+      <td class="col-amount amount-col ${t.type==='income'?'income':'expense'}">${t.type==='income'?'+':'-'}${formatCurrency(t.amount)}</td>
+      <td class="col-actions"><div class="action-btns"><button class="edit-btn" data-id="${t.id}">✏️</button><button class="delete-btn" data-id="${t.id}">🗑️</button></div></td>
     </tr>`;
   },
 

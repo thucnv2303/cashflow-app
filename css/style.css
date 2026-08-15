@@ -550,6 +550,14 @@ body {
   background: var(--surface-hover);
 }
 
+.date-short {
+  display: none;
+}
+
+.tx-note-mobile {
+  display: none;
+}
+
 /* 6. Filter Bar */
 .filter-bar {
   display: flex;
@@ -954,46 +962,107 @@ body {
   }
 
   .page-header {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 8px;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    margin-bottom: 10px !important;
   }
 
-  .page-header h1 {
-    font-size: 1.15rem;
+  .family-greeting {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 6px !important;
   }
 
   .family-greeting h1 {
-    font-size: 0.92rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 200px;
+    font-size: 1.05rem !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    max-width: none !important;
+    margin: 0 !important;
   }
 
   .family-avatars {
-    margin-top: 2px;
-    gap: -4px;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    margin-top: 0 !important;
   }
 
   .family-avatar {
-    width: 26px;
-    height: 26px;
+    width: 26px !important;
+    height: 26px !important;
+  }
+
+  .header-right-controls {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    align-items: stretch !important;
+  }
+
+  .scope-toggle {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 3px !important;
+    gap: 4px !important;
+    border-radius: 20px !important;
+    scrollbar-width: none !important;
+    box-sizing: border-box !important;
+  }
+
+  .scope-toggle::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .scope-btn {
+    flex-shrink: 0 !important;
+    padding: 4px 10px !important;
+    font-size: 0.76rem !important;
+    white-space: nowrap !important;
   }
 
   .month-selector {
-    padding: 4px 8px;
-    font-size: 0.78rem;
-    gap: 6px;
-    border-radius: 12px;
+    padding: 4px 10px !important;
+    font-size: 0.8rem !important;
+    gap: 8px !important;
+    border-radius: 12px !important;
+    align-self: center !important;
   }
 
   .month-btn {
     width: 24px;
     height: 24px;
     font-size: 0.75rem;
+  }
+
+  /* Budget Header Specifics */
+  #page-budget .page-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  #page-budget .header-right-controls {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  #page-budget #openBudgetModalBtn {
+    width: 100% !important;
+    text-align: center !important;
+    justify-content: center !important;
+    padding: 8px 14px !important;
   }
 
   /* Ultra compact mood banner */
@@ -1181,18 +1250,93 @@ body {
   }
 
   .transactions-table {
-    min-width: 420px;
-    font-size: 0.78rem;
+    min-width: 100% !important;
+    width: 100% !important;
+    font-size: 0.72rem !important;
+    table-layout: auto !important;
   }
 
   .transactions-table th, .transactions-table td {
-    padding: 6px 6px !important;
+    padding: 6px 3px !important;
+    vertical-align: middle !important;
   }
 
-  /* Hide redundant "Loại" column on mobile (amount color already indicates +/-) */
+  .date-full { display: none !important; }
+  .date-short { display: inline !important; font-weight: 600; font-size: 0.72rem; }
+
+  .tx-note-mobile {
+    display: block !important;
+    font-size: 0.65rem !important;
+    color: var(--text-secondary) !important;
+    margin-top: 1px !important;
+    white-space: normal !important;
+    max-width: 120px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .transactions-table .col-date,
+  .transactions-table th:nth-child(1) {
+    width: 42px !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+  }
+
+  .transactions-table .col-member,
+  .transactions-table th:nth-child(2) {
+    width: 28px !important;
+    text-align: center !important;
+    padding: 2px !important;
+  }
+
+  /* Hide "Loại" + "Ghi chú" columns on mobile */
+  .transactions-table .col-type,
   .transactions-table th:nth-child(3),
-  .transactions-table td:nth-child(3) {
+  .transactions-table td:nth-child(3),
+  .transactions-table .col-note,
+  .transactions-table th:nth-child(5),
+  .transactions-table td:nth-child(5) {
     display: none !important;
+  }
+
+  .transactions-table .col-cat,
+  .transactions-table th:nth-child(4) {
+    max-width: 120px !important;
+  }
+
+  .transactions-table .tx-cat-name {
+    font-size: 0.74rem !important;
+    font-weight: 500 !important;
+    display: block !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .transactions-table .col-amount,
+  .transactions-table th:nth-child(6) {
+    text-align: right !important;
+    white-space: nowrap !important;
+    font-size: 0.76rem !important;
+    font-weight: 700 !important;
+    padding-right: 4px !important;
+  }
+
+  .transactions-table .col-actions,
+  .transactions-table th:nth-child(7) {
+    width: 44px !important;
+    text-align: center !important;
+    padding: 2px !important;
+  }
+
+  .transactions-table .action-btns {
+    gap: 2px !important;
+    justify-content: center !important;
+  }
+
+  .transactions-table .action-btns button {
+    padding: 2px 3px !important;
+    font-size: 0.7rem !important;
   }
 
   /* Loans page mobile */
