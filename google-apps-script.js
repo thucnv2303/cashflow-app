@@ -75,6 +75,15 @@ function setupSheet() {
     logsSheet.setFrozenRows(1);
     logsSheet.getRange('A1:I1').setFontWeight('bold');
   }
+
+  // Sheet PendingTransactions (Bank Webhook Inbox)
+  let pendingSheet = ss.getSheetByName('PendingTransactions');
+  if (!pendingSheet) {
+    pendingSheet = ss.insertSheet('PendingTransactions');
+    pendingSheet.appendRow(['ID', 'Ngân hàng', 'Loại', 'Số tiền', 'Nội dung thô', 'Danh mục gợi ý', 'Thành viên', 'Ngày giờ', 'Trạng thái', 'Ngày tạo']);
+    pendingSheet.setFrozenRows(1);
+    pendingSheet.getRange('A1:J1').setFontWeight('bold');
+  }
 }
 
 function getSheet(name) {
@@ -412,6 +421,123 @@ function doGet(e) {
 
       return responseJson({ success: true, message: 'Đã đồng bộ tiết kiệm' }, cb);
     }
+
+    // ==================== BANK NOTIFICATION WEBHOOK & PENDING INBOX ====================
+    if (action === 'bankNotification') {
+      const rawText = String(e.parameter.text || e.parameter.body || e.parameter.content || e.parameter.message || '');
+      const title = String(e.parameter.title || e.parameter.sender || '');
+      const bank = String(e.parameter.bank || title || 'Ngân hàng');
+      const member = String(e.parameter.member || 'dad');
+
+      if (!rawText && !title) {
+        return responseJson({ success: false, error: 'Thiếu nội dung thông báo' }, cb);
+      }
+
+      const classified = classifyBankNotification(rawText, title, bank);
+      const pendingSheet = getSheet('PendingTransactions');
+      if (!pendingSheet) return responseJson({ success: false, error: 'Sheet PendingTransactions không tồn tại' }, cb);
+
+      const id = 'pend_' + new Date().getTime() + '_' + Math.floor(Math.random() * 1000);
+      const nowStr = new Date().toISOString();
+      const row = [
+        id,
+        bank,
+        classified.type,
+        classified.amount,
+        classified.note,
+        classified.category,
+        member,
+        nowStr,
+        'pending',
+        nowStr
+      ];
+
+      pendingSheet.appendRow(row);
+      return responseJson({
+        success: true,
+        message: 'Đã nhận thông báo ngân hàng',
+        transaction: {
+          id: id,
+          bank: bank,
+          type: classified.type,
+          amount: classified.amount,
+          note: classified.note,
+          category: classified.category,
+          memberId: member,
+          date: nowStr,
+          status: 'pending'
+        }
+      }, cb);
+    }
+
+    if (action === 'getPending') {
+      const sheet = getSheet('PendingTransactions');
+      if (!sheet) return responseJson({ success: true, data: [] }, cb);
+      const data = sheet.getDataRange().getValues();
+      const pending = [];
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] && String(data[i][8]) === 'pending') {
+          pending.push({
+            id: String(data[i][0]),
+            bank: String(data[i][1] || 'Ngân hàng'),
+            type: String(data[i][2] || 'expense'),
+            amount: Number(data[i][3] || 0),
+            note: String(data[i][4] || ''),
+            category: String(data[i][5] || 'other_expense'),
+            memberId: String(data[i][6] || 'family'),
+            date: String(data[i][7] || ''),
+            status: String(data[i][8] || 'pending'),
+            createdAt: String(data[i][9] || '')
+          });
+        }
+      }
+      return responseJson({ success: true, data: pending }, cb);
+    }
+
+    if (action === 'approvePending') {
+      const pId = String(e.parameter.pendingId || e.parameter.id);
+      const data = typeof e.parameter.data === 'string' ? JSON.parse(e.parameter.data) : e.parameter.data;
+
+      // 1. Add to Transactions sheet
+      const tSheet = getSheet('Transactions');
+      if (tSheet && data) {
+        const transId = data.id || ('trans_' + new Date().getTime());
+        tSheet.appendRow([
+          transId,
+          data.type || 'expense',
+          Number(data.amount || 0),
+          data.category || 'other_expense',
+          data.note || '',
+          data.date || new Date().toISOString().slice(0, 10),
+          data.memberId || 'dad',
+          new Date().toISOString(),
+          data.beneficiaryId || data.memberId || 'family'
+        ]);
+      }
+
+      // 2. Mark pending row as approved
+      const pSheet = getSheet('PendingTransactions');
+      if (pSheet && pId) {
+        const r = findRowById(pSheet, pId);
+        if (r > -1) {
+          pSheet.getRange(r, 9).setValue('approved');
+        }
+      }
+
+      return responseJson({ success: true, message: 'Đã duyệt giao dịch vào sổ' }, cb);
+    }
+
+    if (action === 'deletePending') {
+      const pId = String(e.parameter.id || e.parameter.pendingId);
+      const pSheet = getSheet('PendingTransactions');
+      if (pSheet && pId) {
+        const r = findRowById(pSheet, pId);
+        if (r > -1) {
+          pSheet.getRange(r, 9).setValue('rejected');
+        }
+      }
+      return responseJson({ success: true, message: 'Đã bỏ qua giao dịch' }, cb);
+    }
     
     return responseJson({ success: false, error: 'Hành động không hợp lệ' }, cb);
     
@@ -420,4 +546,69 @@ function doGet(e) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// ==================== SMART VIETNAMESE CLASSIFIER ====================
+function classifyBankNotification(rawText, title, bank) {
+  const fullText = (title + ' ' + rawText + ' ' + (bank || '')).toLowerCase();
+  
+  // 1. Extract Amount
+  let amount = 0;
+  const amtMatch = rawText.match(/(?:[\+\-]|gd:?\s*[\+\-]?|ps:?\s*[\+\-]?)?\s*([\d\.\,]{3,15})\s*(?:vnd|vnđ|đ|d\b)/i) ||
+                   rawText.match(/([\d\.\,]{4,15})\s*(?:vnd|vnđ|đ|d\b)/i);
+  if (amtMatch && amtMatch[1]) {
+    const cleanNum = amtMatch[1].replace(/[\.\,]/g, '');
+    amount = Number(cleanNum) || 0;
+  }
+
+  // 2. Extract Type
+  let type = 'expense';
+  if (rawText.includes('+') || fullText.includes('nhan tien') || fullText.includes('nhận tiền') || fullText.includes('cong tien') || fullText.includes('cộng tiền') || fullText.includes('credit')) {
+    type = 'income';
+  } else if (rawText.includes('-') || fullText.includes('tru tien') || fullText.includes('trừ tiền') || fullText.includes('thanh toan') || fullText.includes('thanh toán') || fullText.includes('debit')) {
+    type = 'expense';
+  }
+
+  // 3. Smart Category Prediction based on keywords
+  let category = type === 'income' ? 'salary' : 'other_expense';
+  if (type === 'expense') {
+    if (/highlands|phở|bún|cơm|quán|cafe|cà phê|trà sữa|starbucks|kfc|lotteria|pizza|food|shopeefood|grabfood|befood|baemin|tokyo deli|haidilao|gogi|kichi|nhà hàng|bánh mì|ăn sáng|ăn trưa|ăn tối|lẩu|nướng/i.test(fullText)) {
+      category = 'food';
+    } else if (/grab|be |xanh sm|taxi|xăng|petrolimex|pvoil|gửi xe|giữ xe|vé xe|cầu đường|epass|vetc|đỗ xe/i.test(fullText)) {
+      category = 'transport';
+    } else if (/shopee|lazada|tiki|sendo|winmart|co\.?op|bách hóa|bach hoa|siêu thị|uniqlo|zara|h&m|mua sắm|shop|store|mall|quần áo|giày|mỹ phẩm/i.test(fullText)) {
+      category = 'shopping';
+    } else if (/evn|điện lực|tiền điện|tiền nước|cấp nước|viettel|vnpt|fpt|internet|wifi|mobifone|vinaphone|chung cư|phí quản lý|vệ sinh|rác/i.test(fullText)) {
+      category = 'bills';
+    } else if (/thuốc|pharmacity|long châu|an khang|bệnh viện|phòng khám|bác sĩ|nha khoa|răng|khám bệnh|y tế/i.test(fullText)) {
+      category = 'health';
+    } else if (/học phí|trường|mầm non|tiểu học|tiếng anh|ila|vus|apollo|sách|vở|dụng cụ học tập/i.test(fullText)) {
+      category = 'education';
+    } else if (/cgv|bhd|lotte cinema|rạp|vé xem phim|netflix|spotify|youtube|steam|game|playstation|du lịch|khách sạn|resort|vé máy bay/i.test(fullText)) {
+      category = 'entertainment';
+    } else if (/nội thất|điện máy|điện thoại|laptop|sửa nhà|decor|gia dụng/i.test(fullText)) {
+      category = 'house';
+    } else if (/chứng khoán|cổ phiếu|ssi|vps|tcbs|vndirect|tiết kiệm|gửi tiền|vàng|sjc|doji/i.test(fullText)) {
+      category = 'invest';
+    }
+  } else {
+    // Income prediction
+    if (/lương|salary|payroll|thu nhập|thưởng|bonus/i.test(fullText)) {
+      category = 'salary';
+    } else if (/đầu tư|cổ tức|lãi|tiết kiệm|interest/i.test(fullText)) {
+      category = 'investment';
+    } else {
+      category = 'other_income';
+    }
+  }
+
+  // 4. Clean note
+  let cleanNote = rawText.replace(/\r?\n|\r/g, ' ').slice(0, 100);
+
+  return {
+    amount: amount,
+    type: type,
+    category: category,
+    note: cleanNote
+  };
 }

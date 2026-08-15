@@ -13,6 +13,8 @@ const CUSTOM_CATS_KEY = 'cashflow_custom_categories';
 const SAVINGS_GOAL_KEY = 'cashflow_savings_goal';
 const SAVINGS_GOALS_KEY = 'cashflow_savings_goals';
 const SAVINGS_LOGS_KEY = 'cashflow_savings_logs';
+const PENDING_KEY = 'cashflow_pending_transactions';
+const WEBHOOK_SECRET_KEY = 'cashflow_webhook_secret';
 
 const DEFAULT_SAVINGS_GOALS = [
   { id: 'goal_emergency', name: 'Quỹ khẩn cấp', emoji: '🛡️', targetAmount: 30000000, currentAmount: 5000000, targetDate: '2026-12-31', memberId: 'family', createdAt: new Date().toISOString() },
@@ -314,6 +316,58 @@ const Storage = {
     return this._sheetApiCall('syncSavings', { goals, logs });
   },
 
+  // ==================== BANK WEBHOOK & PENDING TRANSACTIONS ====================
+  getPendingTransactions() {
+    const raw = localStorage.getItem(PENDING_KEY);
+    if (!raw) return [];
+    try { return JSON.parse(raw); } catch(e) { return []; }
+  },
+  savePendingTransactions(list) {
+    localStorage.setItem(PENDING_KEY, JSON.stringify(list));
+  },
+  getWebhookSecret() {
+    return localStorage.getItem(WEBHOOK_SECRET_KEY) || 'FAMILY_SECRET_2026';
+  },
+  setWebhookSecret(sec) {
+    localStorage.setItem(WEBHOOK_SECRET_KEY, sec);
+  },
+  async fetchPendingFromSheets() {
+    if (!this.isOnline()) return this.getPendingTransactions();
+    try {
+      const res = await this._sheetApiCall('getPending');
+      if (res && res.success && Array.isArray(res.data)) {
+        this.savePendingTransactions(res.data);
+        return res.data;
+      }
+    } catch(e) {
+      console.warn('Fetch pending failed:', e);
+    }
+    return this.getPendingTransactions();
+  },
+  async approvePendingTransaction(pendingId, transactionData) {
+    this.add(transactionData);
+    let pending = this.getPendingTransactions();
+    pending = pending.filter(p => p.id !== pendingId);
+    this.savePendingTransactions(pending);
+    if (this.isOnline()) {
+      this._sheetApiCall('approvePending', { pendingId, data: transactionData }).catch(e => console.warn(e));
+    }
+  },
+  async deletePendingTransaction(pendingId) {
+    let pending = this.getPendingTransactions();
+    pending = pending.filter(p => p.id !== pendingId);
+    this.savePendingTransactions(pending);
+    if (this.isOnline()) {
+      this._sheetApiCall('deletePending', { pendingId }).catch(e => console.warn(e));
+    }
+  },
+  addLocalPending(pendingItem) {
+    const list = this.getPendingTransactions();
+    list.unshift(pendingItem);
+    this.savePendingTransactions(list);
+    return list;
+  },
+
   // ==================== TRANSACTIONS LOCAL STORAGE ====================
   getLocal() {
     const data = localStorage.getItem(STORAGE_KEY);
@@ -338,7 +392,7 @@ const Storage = {
     }
 
     try {
-      if (['syncMembers', 'syncLoans', 'syncBudgets', 'syncCustomCats', 'syncSavings', 'sync', 'add', 'update'].includes(action)) {
+      if (['syncMembers', 'syncLoans', 'syncBudgets', 'syncCustomCats', 'syncSavings', 'approvePending', 'deletePending', 'sync', 'add', 'update'].includes(action)) {
         try {
           const controller = new AbortController();
           const to = setTimeout(() => controller.abort(), 12000);
@@ -704,6 +758,10 @@ const Storage = {
           if (Array.isArray(savingsData.logs)) localStorage.setItem(SAVINGS_LOGS_KEY, JSON.stringify(savingsData.logs));
         }
       } catch (e) { console.warn('Sync savings failed:', e); }
+
+      try {
+        await this.fetchPendingFromSheets();
+      } catch (e) { console.warn('Sync pending failed:', e); }
 
       return true;
     } catch (e) {

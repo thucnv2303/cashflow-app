@@ -47,13 +47,19 @@ function setupSheet() {
     savingsSheet.appendRow(['ID','Tên','Emoji','Mục tiêu','Hiện có','Hạn ngày','Thành viên','Ngày tạo']);
     savingsSheet.setFrozenRows(1);
     savingsSheet.getRange('A1:H1').setFontWeight('bold');
-  }
   let logsSheet = ss.getSheetByName('SavingsLogs');
   if (!logsSheet) {
     logsSheet = ss.insertSheet('SavingsLogs');
     logsSheet.appendRow(['ID','GoalID','GoalName','Loại','Số tiền','Thành viên','Ngày','Ghi chú','Ngày tạo']);
     logsSheet.setFrozenRows(1);
     logsSheet.getRange('A1:I1').setFontWeight('bold');
+  }
+  let pendingSheet = ss.getSheetByName('PendingTransactions');
+  if (!pendingSheet) {
+    pendingSheet = ss.insertSheet('PendingTransactions');
+    pendingSheet.appendRow(['ID','Ngân hàng','Loại','Số tiền','Nội dung thô','Danh mục gợi ý','Thành viên','Ngày giờ','Trạng thái','Ngày tạo']);
+    pendingSheet.setFrozenRows(1);
+    pendingSheet.getRange('A1:J1').setFontWeight('bold');
   }
 }
 function getSheet(name) {
@@ -76,6 +82,36 @@ function doPost(e) {
     } catch(err) {}
   }
   return doGet(e);
+}
+function classifyBankNotification(rawText, title, bank) {
+  var fullText = (title + ' ' + rawText + ' ' + (bank || '')).toLowerCase();
+  var amount = 0;
+  var amtMatch = rawText.match(/(?:[\+\-]|gd:?\s*[\+\-]?|ps:?\s*[\+\-]?)?\s*([\d\.\,]{3,15})\s*(?:vnd|vnđ|đ|d\b)/i) || rawText.match(/([\d\.\,]{4,15})\s*(?:vnd|vnđ|đ|d\b)/i);
+  if (amtMatch && amtMatch[1]) { amount = Number(amtMatch[1].replace(/[\.\,]/g, '')) || 0; }
+  var type = 'expense';
+  if (rawText.includes('+') || fullText.includes('nhan tien') || fullText.includes('nhận tiền') || fullText.includes('cong tien') || fullText.includes('cộng tiền') || fullText.includes('credit')) {
+    type = 'income';
+  } else if (rawText.includes('-') || fullText.includes('tru tien') || fullText.includes('trừ tiền') || fullText.includes('thanh toan') || fullText.includes('thanh toán') || fullText.includes('debit')) {
+    type = 'expense';
+  }
+  var category = type === 'income' ? 'salary' : 'other_expense';
+  if (type === 'expense') {
+    if (/highlands|phở|bún|cơm|quán|cafe|cà phê|trà sữa|starbucks|kfc|lotteria|pizza|food|shopeefood|grabfood|befood|baemin|tokyo deli|haidilao|gogi|kichi|nhà hàng|bánh mì|ăn sáng|ăn trưa|ăn tối|lẩu|nướng/i.test(fullText)) { category = 'food'; }
+    else if (/grab|be |xanh sm|taxi|xăng|petrolimex|pvoil|gửi xe|giữ xe|vé xe|cầu đường|epass|vetc|đỗ xe/i.test(fullText)) { category = 'transport'; }
+    else if (/shopee|lazada|tiki|sendo|winmart|co\.?op|bách hóa|bach hoa|siêu thị|uniqlo|zara|h&m|mua sắm|shop|store|mall|quần áo|giày|mỹ phẩm/i.test(fullText)) { category = 'shopping'; }
+    else if (/evn|điện lực|tiền điện|tiền nước|cấp nước|viettel|vnpt|fpt|internet|wifi|mobifone|vinaphone|chung cư|phí quản lý|vệ sinh|rác/i.test(fullText)) { category = 'bills'; }
+    else if (/thuốc|pharmacity|long châu|an khang|bệnh viện|phòng khám|bác sĩ|nha khoa|răng|khám bệnh|y tế/i.test(fullText)) { category = 'health'; }
+    else if (/học phí|trường|mầm non|tiểu học|tiếng anh|ila|vus|apollo|sách|vở|dụng cụ học tập/i.test(fullText)) { category = 'education'; }
+    else if (/cgv|bhd|lotte cinema|rạp|vé xem phim|netflix|spotify|youtube|steam|game|playstation|du lịch|khách sạn|resort|vé máy bay/i.test(fullText)) { category = 'entertainment'; }
+    else if (/nội thất|điện máy|điện thoại|laptop|sửa nhà|decor|gia dụng/i.test(fullText)) { category = 'house'; }
+    else if (/chứng khoán|cổ phiếu|ssi|vps|tcbs|vndirect|tiết kiệm|gửi tiền|vàng|sjc|doji/i.test(fullText)) { category = 'invest'; }
+  } else {
+    if (/lương|salary|payroll|thu nhập|thưởng|bonus/i.test(fullText)) { category = 'salary'; }
+    else if (/đầu tư|cổ tức|lãi|tiết kiệm|interest/i.test(fullText)) { category = 'investment'; }
+    else { category = 'other_income'; }
+  }
+  var cleanNote = rawText.replace(/\r?\n|\r/g, ' ').slice(0, 100);
+  return { amount: amount, type: type, category: category, note: cleanNote };
 }
 function doGet(e) {
   e = e || {};
@@ -106,6 +142,10 @@ function doGet(e) {
     if (action==='syncCustomCats'){var cs=JSON.parse(e.parameter.data),s=getSheet('CustomCategories'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(cs&&cs.length>0){var rows=cs.map(function(c){return[c.id||'',c.label||'',c.emoji||'📦',c.type||'expense',c.createdAt||''];});s.getRange(2,1,rows.length,5).setValues(rows);}return responseJson({success:true,message:'Đã đồng bộ danh mục tùy chỉnh'}, cb);}
     if (action==='getSavings'){var gs=getSheet('SavingsGoals'),ls=getSheet('SavingsLogs'),goals=[],logs=[];if(gs){var d=gs.getDataRange().getValues();for(var i=1;i<d.length;i++){if(d[i][0])goals.push({id:String(d[i][0]),name:String(d[i][1]||''),emoji:String(d[i][2]||'🐷'),targetAmount:Number(d[i][3]||0),currentAmount:Number(d[i][4]||0),targetDate:String(d[i][5]||''),memberId:String(d[i][6]||'family'),createdAt:String(d[i][7]||'')});}}if(ls){var d=ls.getDataRange().getValues();for(var i=1;i<d.length;i++){if(d[i][0])logs.push({id:String(d[i][0]),goalId:String(d[i][1]||''),goalName:String(d[i][2]||''),type:String(d[i][3]||'deposit'),amount:Number(d[i][4]||0),memberId:String(d[i][5]||'family'),date:String(d[i][6]||''),note:String(d[i][7]||''),createdAt:String(d[i][8]||'')});}}return responseJson({success:true,data:{goals:goals,logs:logs}}, cb);}
     if (action==='syncSavings'){var goals=JSON.parse(e.parameter.goals||'[]'),logs=JSON.parse(e.parameter.logs||'[]');var gs=getSheet('SavingsGoals');if(gs){var lr=gs.getLastRow();if(lr>1)gs.getRange(2,1,lr-1,gs.getLastColumn()).clearContent();if(goals&&goals.length>0){var rows=goals.map(function(g){return[g.id||'',g.name||'',g.emoji||'🐷',Number(g.targetAmount||0),Number(g.currentAmount||0),g.targetDate||'',g.memberId||'family',g.createdAt||''];});gs.getRange(2,1,rows.length,8).setValues(rows);}}var ls=getSheet('SavingsLogs');if(ls){var lr=ls.getLastRow();if(lr>1)ls.getRange(2,1,lr-1,ls.getLastColumn()).clearContent();if(logs&&logs.length>0){var rows=logs.map(function(l){return[l.id||'',l.goalId||'',l.goalName||'',l.type||'deposit',Number(l.amount||0),l.memberId||'family',l.date||'',l.note||'',l.createdAt||''];});ls.getRange(2,1,rows.length,9).setValues(rows);}}return responseJson({success:true,message:'Đã đồng bộ tiết kiệm'}, cb);}
+    if (action==='bankNotification'){var rawText=String(e.parameter.text||e.parameter.body||e.parameter.content||e.parameter.message||''),title=String(e.parameter.title||e.parameter.sender||''),bank=String(e.parameter.bank||title||'Ngân hàng'),member=String(e.parameter.member||'dad');if(!rawText&&!title)return responseJson({success:false,error:'Thiếu nội dung'}, cb);var cls=classifyBankNotification(rawText,title,bank),pSheet=getSheet('PendingTransactions');if(!pSheet)return responseJson({success:false,error:'Sheet not found'}, cb);var id='pend_'+new Date().getTime()+'_'+Math.floor(Math.random()*1000),nowStr=new Date().toISOString();pSheet.appendRow([id,bank,cls.type,cls.amount,cls.note,cls.category,member,nowStr,'pending',nowStr]);return responseJson({success:true,message:'Đã nhận thông báo',transaction:{id:id,bank:bank,type:cls.type,amount:cls.amount,note:cls.note,category:cls.category,memberId:member,date:nowStr,status:'pending'}}, cb);}
+    if (action==='getPending'){var sheet=getSheet('PendingTransactions');if(!sheet)return responseJson({success:true,data:[]}, cb);var d=sheet.getDataRange().getValues(),p=[];for(var i=1;i<d.length;i++){if(d[i][0]&&String(d[i][8])==='pending')p.push({id:String(d[i][0]),bank:String(d[i][1]||'Ngân hàng'),type:String(d[i][2]||'expense'),amount:Number(d[i][3]||0),note:String(d[i][4]||''),category:String(d[i][5]||'other_expense'),memberId:String(d[i][6]||'family'),date:String(d[i][7]||''),status:String(d[i][8]||'pending'),createdAt:String(d[i][9]||'')});}return responseJson({success:true,data:p}, cb);}
+    if (action==='approvePending'){var pId=String(e.parameter.pendingId||e.parameter.id),data=typeof e.parameter.data==='string'?JSON.parse(e.parameter.data):e.parameter.data,tSheet=getSheet('Transactions');if(tSheet&&data){tSheet.appendRow([data.id||('trans_'+new Date().getTime()),data.type||'expense',Number(data.amount||0),data.category||'other_expense',data.note||'',data.date||new Date().toISOString().slice(0,10),data.memberId||'dad',new Date().toISOString(),data.beneficiaryId||data.memberId||'family']);}var pSheet=getSheet('PendingTransactions');if(pSheet&&pId){var r=findRow(pSheet,pId);if(r>-1)pSheet.getRange(r,9).setValue('approved');}return responseJson({success:true,message:'Đã duyệt'}, cb);}
+    if (action==='deletePending'){var pId=String(e.parameter.id||e.parameter.pendingId),pSheet=getSheet('PendingTransactions');if(pSheet&&pId){var r=findRow(pSheet,pId);if(r>-1)pSheet.getRange(r,9).setValue('rejected');}return responseJson({success:true,message:'Đã bỏ qua'}, cb);}
     return responseJson({success:false,error:'Unknown action'}, cb);
   } catch(err) {return responseJson({success:false,error:err.toString()}, cb);} finally {lock.releaseLock();}
 }`;
@@ -617,6 +657,7 @@ const App = {
 
   // ==================== DASHBOARD ====================
   renderDashboard() {
+    this.checkPendingInbox();
     const { year, month } = this.currentMonth;
     let transactions = Storage.getByMonth(year, month);
     const prev = navigateMonth(year, month, -1);
@@ -877,8 +918,15 @@ const App = {
     const au = document.getElementById('apiUrl');
     if (st) st.checked = Storage.getSyncMode() === 'sheets';
     if (ac) ac.style.display = Storage.getSyncMode() === 'sheets' ? 'block' : 'none';
-    if (au) au.value = Storage.getApiUrl();
     if (Storage.isOnline()) { const sa = document.getElementById('syncActions'); if(sa) sa.style.display = 'flex'; }
+    
+    // Webhook URL
+    const webhookInput = document.getElementById('webhookUrlInput');
+    if (webhookInput) {
+      const url = Storage.getApiUrl();
+      webhookInput.value = url ? `${url}?action=bankNotification` : 'Vui lòng kết nối Google Sheets trước để nhận link Webhook cá nhân';
+    }
+
     this.renderMemberManagement();
     this.renderReminderSettings();
   },
@@ -2201,6 +2249,220 @@ const App = {
     document.getElementById('savingsHistoryModal')?.classList.remove('active');
   },
 
+  // ==================== BANK WEBHOOK & PENDING TRANSACTIONS ====================
+  checkPendingInbox() {
+    const pending = Storage.getPendingTransactions();
+    const banner = document.getElementById('pendingInboxBanner');
+    const countEl = document.getElementById('pendingBannerCount');
+    if (banner && countEl) {
+      if (pending.length > 0) {
+        banner.style.display = 'flex';
+        countEl.textContent = `${pending.length} giao dịch ngân hàng mới`;
+      } else {
+        banner.style.display = 'none';
+      }
+    }
+  },
+
+  openPendingInboxModal() {
+    const modal = document.getElementById('pendingInboxModal');
+    if (!modal) return;
+    this.renderPendingInbox();
+    modal.classList.add('active');
+  },
+
+  closePendingInboxModal() {
+    document.getElementById('pendingInboxModal')?.classList.remove('active');
+    this.checkPendingInbox();
+  },
+
+  renderPendingInbox() {
+    const container = document.getElementById('pendingItemsList');
+    if (!container) return;
+    const pending = Storage.getPendingTransactions();
+    const expenseCats = getExpenseCategories();
+    const incomeCats = getIncomeCategories();
+    const members = Storage.getMembers();
+
+    if (pending.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <span class="empty-icon">🎉</span>
+          <p>Hộp thư trống!</p>
+          <p class="text-muted">Tất cả giao dịch ngân hàng đã được phân bổ.</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = pending.map((p, idx) => {
+      const isExp = p.type === 'expense';
+      const availableCats = isExp ? expenseCats : incomeCats;
+      const catOptions = availableCats.map(c => `
+        <option value="${c.id}" ${c.id === p.category ? 'selected' : ''}>${c.emoji} ${c.label}</option>
+      `).join('');
+
+      const memberOptions = `
+        <option value="family" ${p.memberId === 'family' ? 'selected' : ''}>👨‍👩‍👧‍👦 Cả nhà (Chung)</option>
+        ${members.map(m => `
+          <option value="${m.id}" ${m.id === p.memberId ? 'selected' : ''}>👤 ${m.name}</option>
+        `).join('')}
+      `;
+
+      return `
+        <div class="pending-card-item" data-pending-id="${p.id}">
+          <div class="pending-card-header">
+            <div class="pending-bank-badge">
+              <span>🏦</span>
+              <span>${p.bank || 'Ngân hàng'}</span>
+            </div>
+            <div class="pending-card-amount ${p.type}">
+              ${isExp ? '-' : '+'}${formatCurrency(p.amount)}
+            </div>
+          </div>
+
+          <div class="pending-raw-text">
+            "${p.note || 'Biến động số dư'}"
+          </div>
+
+          <div class="pending-controls-row">
+            <div>
+              <label style="font-size:0.72rem; color:var(--text-secondary); margin-bottom:2px; display:block;">Danh mục phân bổ:</label>
+              <select class="pending-select pending-cat-select" data-id="${p.id}">
+                ${catOptions}
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.72rem; color:var(--text-secondary); margin-bottom:2px; display:block;">Chi cho ai:</label>
+              <select class="pending-select pending-member-select" data-id="${p.id}">
+                ${memberOptions}
+              </select>
+            </div>
+          </div>
+
+          <div class="pending-card-actions">
+            <button type="button" class="btn-dismiss-pending" data-id="${p.id}">🗑️ Bỏ qua</button>
+            <button type="button" class="btn-approve-pending" data-id="${p.id}">✅ Phân bổ & Lưu</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Bind approve & dismiss buttons
+    container.querySelectorAll('.btn-approve-pending').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = btn.dataset.id;
+        const itemEl = btn.closest('.pending-card-item');
+        const catSelect = itemEl.querySelector('.pending-cat-select');
+        const memSelect = itemEl.querySelector('.pending-member-select');
+        const targetPending = pending.find(x => x.id === id);
+        if (targetPending) {
+          const selectedCat = catSelect ? catSelect.value : targetPending.category;
+          const selectedMember = memSelect ? memSelect.value : targetPending.memberId;
+          
+          Storage.approvePendingTransaction(id, {
+            type: targetPending.type,
+            amount: targetPending.amount,
+            category: selectedCat,
+            note: targetPending.note,
+            date: targetPending.date ? targetPending.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
+            memberId: selectedMember !== 'family' ? selectedMember : (members[0] ? members[0].id : 'dad'),
+            beneficiaryId: selectedMember
+          });
+
+          this.showToast(`Đã lưu giao dịch ${formatCurrency(targetPending.amount)} vào sổ! ✅`);
+          this.renderPendingInbox();
+          this.renderCurrentPage();
+        }
+      });
+    });
+
+    container.querySelectorAll('.btn-dismiss-pending').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        Storage.deletePendingTransaction(id);
+        this.showToast('Đã bỏ qua giao dịch');
+        this.renderPendingInbox();
+        this.renderCurrentPage();
+      });
+    });
+  },
+
+  handleTestWebhook() {
+    const samples = [
+      {
+        text: 'TK 19036789 -55.000VND vao 15/08 tai HIGHLANDS COFFEE KEANGNAM',
+        title: 'Techcombank Mobile',
+        bank: 'Techcombank',
+        member: 'dad'
+      },
+      {
+        text: 'TK 001100456 -185.000 VND luc 15/08 thanh toan SHOPEE PAY',
+        title: 'VCB Digibank',
+        bank: 'Vietcombank',
+        member: 'mom'
+      },
+      {
+        text: 'Giao dich thanh cong: -32.000d tai GRAB BIKE vao 15/08',
+        title: 'MB Bank',
+        bank: 'MB Bank',
+        member: 'dad'
+      },
+      {
+        text: 'TK 19036789 +10.000.000VND luc 15/08 luong thang 8',
+        title: 'Techcombank Mobile',
+        bank: 'Techcombank',
+        member: 'dad'
+      }
+    ];
+
+    const sample = samples[Math.floor(Math.random() * samples.length)];
+
+    if (Storage.isOnline()) {
+      this.showToast('Đang gửi thông báo mẫu tới Webhook Google Sheets... ⏳');
+      Storage._sheetApiCall('bankNotification', sample).then(res => {
+        if (res && res.success && res.transaction) {
+          Storage.addLocalPending(res.transaction);
+          this.checkPendingInbox();
+          this.showToast(`🔔 Đã nhận biến động: ${sample.bank} (${formatCurrency(res.transaction.amount)})!`);
+        }
+      }).catch(err => {
+        console.warn(err);
+        this._simulateLocalBankNotification(sample);
+      });
+    } else {
+      this._simulateLocalBankNotification(sample);
+    }
+  },
+
+  _simulateLocalBankNotification(sample) {
+    const fullText = (sample.title + ' ' + sample.text + ' ' + sample.bank).toLowerCase();
+    let amount = 55000;
+    const amtMatch = sample.text.match(/(?:[\+\-]|gd:?\s*[\+\-]?|ps:?\s*[\+\-]?)?\s*([\d\.\,]{3,15})\s*(?:vnd|vnđ|đ|d\b)/i);
+    if (amtMatch && amtMatch[1]) amount = Number(amtMatch[1].replace(/[\.\,]/g, '')) || 55000;
+    const type = sample.text.includes('+') ? 'income' : 'expense';
+    let cat = 'food';
+    if (/shopee|lazada/i.test(fullText)) cat = 'shopping';
+    else if (/grab|be/i.test(fullText)) cat = 'transport';
+    else if (/luong|salary/i.test(fullText)) cat = 'salary';
+
+    const item = {
+      id: 'pend_' + new Date().getTime(),
+      bank: sample.bank,
+      type: type,
+      amount: amount,
+      note: sample.text,
+      category: cat,
+      memberId: sample.member,
+      date: new Date().toISOString(),
+      status: 'pending'
+    };
+
+    Storage.addLocalPending(item);
+    this.checkPendingInbox();
+    this.showToast(`🔔 Giả lập nhận biến động: ${sample.bank} (${formatCurrency(amount)})!`);
+  },
+
   // ==================== LOAN MODAL ====================
   openLoanModal(editId = null) {
     this.editingLoanId = editId;
@@ -2385,6 +2647,27 @@ const App = {
 
     document.getElementById('savingsHistoryClose')?.addEventListener('click', () => this.closeSavingsHistoryModal());
     document.getElementById('savingsHistoryModal')?.addEventListener('click', (e) => { if (e.target.id === 'savingsHistoryModal') this.closeSavingsHistoryModal(); });
+
+    // Pending bank transactions inbox
+    document.getElementById('openPendingInboxBtn')?.addEventListener('click', () => this.openPendingInboxModal());
+    document.getElementById('pendingInboxClose')?.addEventListener('click', () => this.closePendingInboxModal());
+    document.getElementById('pendingInboxModal')?.addEventListener('click', (e) => { if (e.target.id === 'pendingInboxModal') this.closePendingInboxModal(); });
+    
+    // Webhook settings actions
+    document.getElementById('copyWebhookBtn')?.addEventListener('click', () => {
+      const input = document.getElementById('webhookUrlInput');
+      if (input && input.value) {
+        navigator.clipboard.writeText(input.value).then(() => {
+          this.showToast('Đã sao chép link Webhook! 📋');
+        }).catch(() => {
+          input.select();
+          document.execCommand('copy');
+          this.showToast('Đã sao chép link Webhook! 📋');
+        });
+      }
+    });
+
+    document.getElementById('testWebhookBtn')?.addEventListener('click', () => this.handleTestWebhook());
 
     // Transaction modal
     document.getElementById('addTransactionBtn')?.addEventListener('click', (e) => { e.stopPropagation(); this.openModal(); });
