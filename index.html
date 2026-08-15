@@ -527,11 +527,11 @@
           <h1>Cài đặt</h1>
         </div>
 
-        <!-- Sync Mode -->
+        <!-- ========== 1. SYNC GOOGLE SHEETS ========== -->
         <div class="settings-section">
           <div class="chart-card">
-            <h3>📡 Đồng bộ dữ liệu</h3>
-            <p class="settings-desc">Kết nối Google Sheets để đồng bộ dữ liệu giữa nhiều thiết bị. Vợ chồng, gia đình có thể cùng quản lý chi tiêu chung.</p>
+            <h3>📡 Đồng bộ Google Sheets</h3>
+            <p class="settings-desc">Kết nối Google Sheets để đồng bộ dữ liệu giữa nhiều thiết bị. Cả gia đình cùng quản lý chi tiêu chung.</p>
             
             <!-- Sync Toggle -->
             <div class="sync-toggle-group">
@@ -544,7 +544,7 @@
               </label>
             </div>
 
-            <!-- API URL Input (shown when sync enabled) -->
+            <!-- API URL Input -->
             <div class="api-config" id="apiConfig" style="display:none;">
               <div class="form-group">
                 <label for="apiUrl">URL Google Apps Script</label>
@@ -553,117 +553,180 @@
                   <button class="btn-primary" id="testConnectionBtn" type="button">Kiểm tra</button>
                 </div>
               </div>
-              
-              <!-- Connection Status -->
               <div class="connection-status" id="connectionStatus" style="display:none;">
                 <span class="status-icon" id="statusIcon">⏳</span>
                 <span class="status-text" id="statusText">Đang kiểm tra...</span>
               </div>
-
-              <!-- Sync Actions -->
               <div class="sync-actions" id="syncActions" style="display:none;">
                 <button class="btn-primary" id="syncPullBtn" type="button">📥 Tải dữ liệu từ Sheet</button>
                 <button class="btn-ghost" id="syncPushBtn" type="button">📤 Đẩy dữ liệu lên Sheet</button>
               </div>
             </div>
+
+            <!-- Hướng dẫn kết nối (gom vào đây) -->
+            <details class="accordion-guide" style="margin-top: 12px;">
+              <summary class="accordion-header">
+                <div class="guide-summary-left">
+                  <span class="guide-icon">📖</span>
+                  <div>
+                    <strong style="font-size:0.85rem;">Hướng dẫn kết nối Google Sheets (6 bước)</strong>
+                    <span class="text-muted" style="font-size:0.72rem; display:block;">Bấm để mở hướng dẫn chi tiết</span>
+                  </div>
+                </div>
+                <span class="accordion-arrow">▼</span>
+              </summary>
+              <div class="setup-guide" style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; font-size: 0.8rem;">
+                <div class="guide-step">
+                  <div class="step-number">1</div>
+                  <div class="step-content">
+                    <strong>Tạo Google Sheet mới</strong>
+                    <p>Mở <a href="https://sheets.new" target="_blank" rel="noopener">sheets.new</a> → đặt tên "CashFlow"</p>
+                  </div>
+                </div>
+                <div class="guide-step">
+                  <div class="step-number">2</div>
+                  <div class="step-content">
+                    <strong>Mở Apps Script</strong>
+                    <p>Trong Google Sheet → Menu "Tiện ích mở rộng" → "Apps Script"</p>
+                  </div>
+                </div>
+                <div class="guide-step">
+                  <div class="step-number">3</div>
+                  <div class="step-content">
+                    <strong>Dán code</strong>
+                    <p>Xóa nội dung cũ → dán code bên dưới → nhấn 💾 Lưu</p>
+                    <button class="btn-ghost" id="copyScriptBtn" type="button" style="margin-top: 6px;">📋 Copy code Apps Script</button>
+                  </div>
+                </div>
+                <div class="guide-step">
+                  <div class="step-number">4</div>
+                  <div class="step-content">
+                    <strong>Chạy setupSheet</strong>
+                    <p>Chọn hàm "setupSheet" từ dropdown → nhấn ▶️ Run → cấp quyền khi được hỏi</p>
+                  </div>
+                </div>
+                <div class="guide-step">
+                  <div class="step-number">5</div>
+                  <div class="step-content">
+                    <strong>Triển khai (Deploy)</strong>
+                    <p>Nhấn <strong>Deploy</strong> → <strong>New deployment</strong> → Loại: <strong>Web app</strong></p>
+                    <p>• Execute as: <strong>Me</strong> • Who has access: <strong>Anyone</strong></p>
+                    <p>→ Nhấn <strong>Deploy</strong> → Sao chép <strong>URL</strong></p>
+                  </div>
+                </div>
+                <div class="guide-step">
+                  <div class="step-number">6</div>
+                  <div class="step-content">
+                    <strong>Dán URL</strong>
+                    <p>Dán URL vào ô phía trên → nhấn "Kiểm tra" → Xong! 🎉</p>
+                  </div>
+                </div>
+              </div>
+            </details>
           </div>
         </div>
 
-        <!-- Setup Guide Accordion -->
-        <div class="settings-section">
-          <details class="guide-accordion chart-card">
-            <summary class="guide-summary">
-              <div class="guide-summary-header">
-                <span class="guide-icon">📖</span>
-                <div>
-                  <h3 style="margin:0; font-size:1rem;">Hướng dẫn kết nối Google Sheets (6 bước)</h3>
-                  <span class="text-muted" style="font-size:0.75rem;">Bấm để mở / đóng chi tiết các bước</span>
-                </div>
-              </div>
-              <span class="accordion-arrow">▼</span>
-            </summary>
-            <div class="setup-guide" style="margin-top: 14px; border-top: 1px solid var(--border); padding-top: 14px;">
-              <div class="guide-step">
-                <div class="step-number">1</div>
-                <div class="step-content">
-                  <strong>Tạo Google Sheet mới</strong>
-                  <p>Mở <a href="https://sheets.new" target="_blank" rel="noopener">sheets.new</a> → đặt tên "CashFlow"</p>
-                </div>
-              </div>
-              <div class="guide-step">
-                <div class="step-number">2</div>
-                <div class="step-content">
-                  <strong>Mở Apps Script</strong>
-                  <p>Trong Google Sheet → Menu "Tiện ích mở rộng" → "Apps Script"</p>
-                </div>
-              </div>
-              <div class="guide-step">
-                <div class="step-number">3</div>
-                <div class="step-content">
-                  <strong>Dán code</strong>
-                  <p>Xóa nội dung cũ → dán code bên dưới → nhấn 💾 Lưu</p>
-                  <button class="btn-ghost" id="copyScriptBtn" type="button" style="margin-top: 6px;">📋 Copy code Apps Script</button>
-                </div>
-              </div>
-              <div class="guide-step">
-                <div class="step-number">4</div>
-                <div class="step-content">
-                  <strong>Chạy setupSheet</strong>
-                  <p>Trong Apps Script → chọn hàm "setupSheet" từ dropdown → nhấn ▶️ Run → cấp quyền khi được hỏi</p>
-                </div>
-              </div>
-              <div class="guide-step">
-                <div class="step-number">5</div>
-                <div class="step-content">
-                  <strong>Triển khai (Deploy)</strong>
-                  <p>Nhấn <strong>Triển khai (Deploy)</strong> → <strong>Tùy chọn triển khai mới (New deployment)</strong>:</p>
-                  <p>• Chọn loại: <strong>Ứng dụng web (Web app)</strong></p>
-                  <p>• Thực thi dưới tên (Execute as): <strong>Tôi (Me)</strong></p>
-                  <p>• Ai có quyền truy cập (Who has access): <strong>Bất kỳ ai (Anyone)</strong> <em>(Rất quan trọng!)</em></p>
-                  <p>→ Nhấn <strong>Triển khai (Deploy)</strong> → Sao chép <strong>URL ứng dụng web</strong></p>
-                </div>
-              </div>
-              <div class="guide-step">
-                <div class="step-number">6</div>
-                <div class="step-content">
-                  <strong>Dán URL</strong>
-                  <p>Dán URL vừa copy vào ô phía trên → nhấn "Kiểm tra" → Xong! 🎉</p>
-                </div>
-              </div>
-            </div>
-          </details>
-        </div>
-
-        <!-- Bank Webhook Auto-Sync Section -->
+        <!-- ========== 2. NGÂN HÀNG TỰ ĐỘNG ========== -->
         <div class="settings-section">
           <div class="chart-card">
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-              <span style="font-size:1.4rem;">⚡</span>
-              <h3 style="margin:0;">Tự động hóa Ngân hàng (Bank Webhook)</h3>
-            </div>
-            <p class="settings-desc">Tự động nhận thông báo trừ tiền/cộng tiền từ App Ngân hàng (Techcombank, Vietcombank, MB, Momo...) qua Webhook an toàn 100% không qua trung gian.</p>
+            <h3>🏦 Ngân hàng tự động</h3>
+            <p class="settings-desc">Tự động nhận biến động số dư từ App ngân hàng (Techcombank, VCB, MB, Momo...) vào sổ chi tiêu.</p>
 
+            <!-- Webhook URL -->
             <div class="form-group" style="margin-top: 12px;">
-              <label>Link Webhook cá nhân của bạn:</label>
+              <label>Link Webhook cá nhân:</label>
               <div style="display: flex; gap: 8px;">
                 <input type="text" id="webhookUrlInput" class="filter-input" readonly style="flex: 1; font-size: 0.78rem; background: var(--surface-hover);">
-                <button type="button" class="btn-ghost" id="copyWebhookBtn" title="Sao chép Link Webhook">📋 Copy</button>
+                <button type="button" class="btn-ghost" id="copyWebhookBtn" title="Sao chép">📋 Copy</button>
               </div>
-              <small class="text-muted" style="font-size:0.72rem; display:block; margin-top:4px;">Dùng link này dán vào app MacroDroid (Android) hoặc Shortcuts (iOS) để tự động bắn thông báo về App.</small>
             </div>
 
-            <!-- Member Email Registration (1-Tap Setup) -->
-            <div class="form-group" style="margin-top: 12px; background: rgba(231, 125, 62, 0.08); border: 1px dashed var(--primary); padding: 14px; border-radius: 10px;">
-              <label style="font-weight: 700; color: var(--primary); font-size: 0.88rem;">👨‍👩‍👧‍👦 Thêm Email Biến Động Số Dư Cho Thành Viên</label>
-              <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 4px 0 10px 0; line-height: 1.45;">Vợ/chồng/thành viên chỉ cần nhập email Gmail nhận biến động ngân hàng vào đây và bấm <strong>Kích hoạt</strong>. Hệ thống sẽ tự quét email ngân hàng 24/7 đưa vào sổ gia đình!</p>
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+              <button type="button" class="btn-primary" id="scanGmailBtn" style="font-size: 0.8rem; padding: 6px 12px; background: #1a73e8;">📧 Quét Gmail ngay</button>
+              <button type="button" class="btn-ghost" id="testWebhookBtn" style="font-size: 0.8rem; padding: 6px 12px;">🧪 Gửi thử thông báo mẫu</button>
+            </div>
 
+            <!-- Hướng dẫn cài đặt tự động (gom tất cả vào 1 thẻ) -->
+            <details class="accordion-guide" style="margin-top: 12px;">
+              <summary class="accordion-header">
+                <div class="guide-summary-left">
+                  <span class="guide-icon">📖</span>
+                  <div>
+                    <strong style="font-size:0.85rem;">Hướng dẫn cài đặt tự động (4 cách)</strong>
+                    <span class="text-muted" style="font-size:0.72rem; display:block;">Gmail, iOS Shortcut, Siri, MacroDroid</span>
+                  </div>
+                </div>
+                <span class="accordion-arrow">▼</span>
+              </summary>
+              <div class="setup-guide" style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; font-size: 0.8rem;">
+
+                <!-- Cách 1: Gmail -->
+                <div style="margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
+                  <p style="font-weight: 700; margin-bottom: 6px;">☁️ Cách 1: Tự động qua Gmail (24/7)</p>
+                  <p style="font-size: 0.76rem; color: var(--text-secondary); margin-bottom: 6px;">Nếu ngân hàng gửi email biến động số dư:</p>
+                  <ol style="padding-left: 18px; line-height: 1.6; font-size: 0.76rem;">
+                    <li>Mở Apps Script → chọn hàm <strong>setupGmailTrigger</strong> → ▶️ Run</li>
+                    <li>Cấp quyền đọc Gmail → Xong! Tự quét mỗi 1 phút 24/7</li>
+                  </ol>
+                </div>
+
+                <!-- Cách 2: iOS Shortcut -->
+                <div style="margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
+                  <p style="font-weight: 700; margin-bottom: 6px;">📱 Cách 2: Khi mở App ngân hàng (iPhone) ⭐</p>
+                  <p style="font-size: 0.76rem; color: var(--text-secondary); margin-bottom: 6px;">Bấm thông báo → App ngân hàng mở → tự hỏi số tiền:</p>
+                  <ol style="padding-left: 18px; line-height: 1.6; font-size: 0.76rem;">
+                    <li>Mở <strong>Phím tắt</strong> → <strong>Tự động hóa</strong> → <strong>+</strong></li>
+                    <li>Chọn <strong>"Ứng dụng"</strong> → chọn App ngân hàng → <strong>"Được mở"</strong></li>
+                    <li>Thêm <strong>"Yêu cầu đầu vào"</strong> (Số) → <strong>"Lấy nội dung URL"</strong> (GET)</li>
+                    <li>URL = Webhook + <code>?action=bankNotification&text=Chi [Đầu vào]&member=dad</code></li>
+                  </ol>
+                </div>
+
+                <!-- Cách 3: Siri -->
+                <div style="margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
+                  <p style="font-weight: 700; margin-bottom: 6px;">🗣️ Cách 3: "Hey Siri, ghi chi tiêu" (không mở khóa)</p>
+                  <ol style="padding-left: 18px; line-height: 1.6; font-size: 0.76rem;">
+                    <li>Mở <strong>Phím tắt</strong> → Tạo phím tắt mới → Đặt tên <strong>"Ghi chi tiêu"</strong></li>
+                    <li>Thêm <strong>"Yêu cầu đầu vào"</strong> + <strong>"Lấy nội dung URL"</strong></li>
+                    <li>Nói <strong>"Hey Siri, ghi chi tiêu"</strong> → nhập số → xong!</li>
+                  </ol>
+                </div>
+
+                <!-- Cách 4: Android -->
+                <div>
+                  <p style="font-weight: 700; margin-bottom: 6px;">🤖 Cách 4: MacroDroid (Android) — Tự động 100%</p>
+                  <ol style="padding-left: 18px; line-height: 1.6; font-size: 0.76rem;">
+                    <li>Tải <strong>MacroDroid</strong> trên CH Play</li>
+                    <li>Trigger: <strong>Thông báo</strong> từ App ngân hàng</li>
+                    <li>Action: <strong>HTTP GET</strong> → Webhook URL + tham số</li>
+                  </ol>
+                  <p style="background: rgba(34,197,94,0.1); padding: 6px 10px; border-radius: 8px; font-size: 0.72rem; color: #4ade80; border: 1px solid rgba(34,197,94,0.2); margin-top: 6px;">✅ Android bắt Push Notification → tự động 100%!</p>
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <!-- ========== 3. EMAIL THÀNH VIÊN ========== -->
+        <div class="settings-section">
+          <div class="chart-card">
+            <h3>👨‍👩‍👧‍👦 Quản lý thành viên</h3>
+            <p class="settings-desc">Thêm, sửa hoặc xóa thành viên trong gia đình.</p>
+            <div class="member-management-list" id="memberManagementList">
+              <!-- JS renders member rows -->
+            </div>
+            <button class="btn-primary" id="addMemberBtn" type="button" style="margin-top:16px;width:100%;">➕ Thêm thành viên</button>
+
+            <!-- Email biến động số dư -->
+            <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);">
+              <label style="font-weight: 700; font-size: 0.85rem;">📧 Email biến động số dư cho thành viên</label>
+              <p style="font-size: 0.74rem; color: var(--text-secondary); margin: 4px 0 10px; line-height: 1.4;">Thành viên nhập Gmail nhận biến động ngân hàng → Hệ thống tự quét 24/7.</p>
               <div id="memberEmailList"></div>
-
-              <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06);">
-                <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-primary);">📧 Email nhận biến động số dư:</label>
-                <div style="display: flex; gap: 8px; margin-top: 6px; align-items: center;">
+              <div style="margin-top: 8px;">
+                <div style="display: flex; gap: 8px; align-items: center;">
                   <input type="email" id="memberEmailInput" class="filter-input" placeholder="Ví dụ: vominh@gmail.com" style="flex: 1; font-size: 0.82rem;">
-                  <select id="memberRoleSelect" class="filter-input" style="width: 110px; font-size: 0.78rem;">
+                  <select id="memberRoleSelect" class="filter-input" style="width: 100px; font-size: 0.78rem;">
                     <option value="mom">Vợ 🌸</option>
                     <option value="dad">Chồng 👔</option>
                     <option value="child">Con 🧒</option>
@@ -671,125 +734,25 @@
                   </select>
                 </div>
                 <button type="button" class="btn-primary" id="activateMemberEmailBtn" style="font-size: 0.82rem; padding: 10px 16px; margin-top: 8px; width: 100%; background: #e77d3e;">🚀 Kích hoạt Quét Email Tự Động</button>
-                <small class="text-muted" style="font-size: 0.7rem; display:block; margin-top:6px; line-height: 1.4;">Khi bấm Kích hoạt, hệ thống sẽ mở trang xác nhận quyền đọc Gmail <strong>1 lần duy nhất</strong>. Sau đó email ngân hàng sẽ được quét tự động 24/7 mà không cần thao tác thêm.</small>
               </div>
             </div>
-
-            <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
-              <button type="button" class="btn-primary" id="scanGmailBtn" style="font-size: 0.8rem; padding: 6px 12px; background: #1a73e8;">📧 Quét Email Ngân hàng từ Gmail ngay</button>
-              <button type="button" class="btn-ghost" id="testWebhookBtn" style="font-size: 0.8rem; padding: 6px 12px;">🧪 Gửi thử 1 thông báo mẫu</button>
-            </div>
-
-            <details class="accordion-guide" style="margin-top: 12px;">
-              <summary class="accordion-header">
-                <div class="guide-summary-left">
-                  <span class="guide-icon">☁️</span>
-                  <div>
-                    <strong style="font-size:0.85rem;">Cách 1: Tự động qua Gmail (Khuyên dùng - Không cần cài gì trên điện thoại)</strong>
-                    <span class="text-muted" style="font-size:0.72rem; display:block;">Chạy ngầm 24/7 trên máy chủ Google miễn phí</span>
-                  </div>
-                </div>
-                <span class="accordion-arrow">▼</span>
-              </summary>
-              <div class="setup-guide" style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; font-size: 0.8rem;">
-                <p>Nếu bạn đăng ký nhận <strong>Email biến động số dư</strong> từ ngân hàng (VPBank, Techcombank, MB, VCB...):</p>
-                <ol style="padding-left: 18px; line-height: 1.6; margin-bottom: 8px;">
-                  <li>Mở Google Sheet → Menu <strong>Tiện ích mở rộng</strong> → <strong>Apps Script</strong>.</li>
-                  <li>Copy và dán lại đoạn mã Apps Script mới nhất (bấm nút copy ở mục Google Sheets phía trên).</li>
-                  <li>Trên thanh công cụ Apps Script, chọn hàm <strong>setupGmailTrigger</strong> từ menu thả xuống → Nhấn nút <strong>▶️ Run (Chạy)</strong> → Cấp quyền đọc Gmail khi Google hỏi.</li>
-                  <li><strong>Xong!</strong> Google sẽ tự động kiểm tra hòm thư Gmail của bạn mỗi 1 phút 24/7. Cứ có email biến động là tự bóc tách đưa vào App CashFlow!</li>
-                </ol>
-              </div>
-            </details>
-
-            <details class="accordion-guide" style="margin-top: 10px;">
-              <summary class="accordion-header">
-                <div class="guide-summary-left">
-                  <span class="guide-icon">📱</span>
-                  <div>
-                    <strong style="font-size:0.85rem;">Cách 2: Tự ghi khi mở App ngân hàng (iPhone) ⭐ Khuyên dùng</strong>
-                    <span class="text-muted" style="font-size:0.72rem; display:block;">Tự hiện ô nhập khi bạn bấm vào thông báo ngân hàng</span>
-                  </div>
-                </div>
-                <span class="accordion-arrow">▼</span>
-              </summary>
-              <div class="setup-guide" style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; font-size: 0.8rem;">
-                <p><strong>🍎 Dành cho iPhone (iOS 16+):</strong></p>
-                <p style="color: var(--text-secondary); font-size: 0.76rem; margin-bottom: 8px;">Khi nhận thông báo ngân hàng → bạn bấm vào thông báo → App ngân hàng mở → <strong>Shortcuts tự hiện lên hỏi số tiền</strong> → Gõ số → Xong!</p>
-                <ol style="padding-left: 18px; line-height: 1.7; margin-bottom: 10px;">
-                  <li>Mở app <strong>Phím tắt (Shortcuts)</strong> → Tab <strong>Tự động hóa</strong> → Bấm <strong>+</strong></li>
-                  <li>Chọn <strong>"Ứng dụng"</strong> → Tìm và chọn <strong>App ngân hàng</strong> của bạn (VPBank, TCB, MB...) → Chọn <strong>"Được mở"</strong> → <strong>Tiếp</strong></li>
-                  <li>Chọn <strong>"Phím tắt mới"</strong> → Thêm các tác vụ theo thứ tự:
-                    <ul style="margin: 6px 0; padding-left: 16px; line-height: 1.6;">
-                      <li><strong>Yêu cầu đầu vào</strong> → Đặt câu hỏi: <em>"Nhập số tiền giao dịch:"</em> → Loại: <strong>Số</strong></li>
-                      <li><strong>Lấy nội dung của URL</strong> → Dán link Webhook (copy ở trên) → Phương thức: <strong>GET</strong></li>
-                      <li>Bấm vào URL và thêm tham số:
-                        <br>• <code>action</code> = <code>bankNotification</code>
-                        <br>• <code>text</code> = <code>Chi [Đầu vào đã cung cấp]</code>
-                        <br>• <code>bank</code> = <code>Tên ngân hàng</code>
-                        <br>• <code>member</code> = <code>dad</code> (hoặc <code>mom</code>)
-                      </li>
-                    </ul>
-                  </li>
-                  <li>Bấm <strong>Xong</strong>. Chọn <strong>"Chạy ngay sau khi xác nhận"</strong> hoặc <strong>"Chạy ngay"</strong></li>
-                </ol>
-                <p style="background: rgba(34,197,94,0.1); padding: 8px 12px; border-radius: 8px; font-size: 0.76rem; color: #4ade80; border: 1px solid rgba(34,197,94,0.2);">✅ <strong>Xong!</strong> Từ nay mỗi khi bấm thông báo ngân hàng, Shortcuts tự bật lên hỏi số tiền. Gõ số → tự ghi vào CashFlow!</p>
-              </div>
-            </details>
-
-            <details class="accordion-guide" style="margin-top: 10px;">
-              <summary class="accordion-header">
-                <div class="guide-summary-left">
-                  <span class="guide-icon">🗣️</span>
-                  <div>
-                    <strong style="font-size:0.85rem;">Cách 3: "Hey Siri, ghi chi tiêu" (không cần mở khóa)</strong>
-                    <span class="text-muted" style="font-size:0.72rem; display:block;">Điều khiển bằng giọng nói, tay không chạm màn hình</span>
-                  </div>
-                </div>
-                <span class="accordion-arrow">▼</span>
-              </summary>
-              <div class="setup-guide" style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; font-size: 0.8rem;">
-                <p style="color: var(--text-secondary); font-size: 0.76rem; margin-bottom: 8px;">Nhận thông báo ngân hàng → Nói <strong>"Hey Siri, ghi chi tiêu"</strong> → Siri hỏi số tiền → Nói số → Xong! Hoạt động cả khi <strong>đang khóa màn hình</strong>.</p>
-                <ol style="padding-left: 18px; line-height: 1.7; margin-bottom: 10px;">
-                  <li>Mở app <strong>Phím tắt</strong> → Tab <strong>Phím tắt</strong> (không phải Tự động hóa) → Bấm <strong>+</strong></li>
-                  <li>Đặt tên: <strong>"Ghi chi tiêu"</strong></li>
-                  <li>Thêm các tác vụ:
-                    <ul style="margin: 6px 0; padding-left: 16px; line-height: 1.6;">
-                      <li><strong>Yêu cầu đầu vào</strong> → Câu hỏi: <em>"Số tiền bao nhiêu?"</em> → Loại: <strong>Số</strong></li>
-                      <li><strong>Lấy nội dung của URL</strong> → Dán link Webhook → Phương thức: <strong>GET</strong></li>
-                      <li>Tham số URL: <code>action=bankNotification</code>, <code>text=Chi [Đầu vào]</code>, <code>member=dad</code></li>
-                    </ul>
-                  </li>
-                  <li>Bấm <strong>Xong</strong></li>
-                </ol>
-                <p style="background: rgba(59,130,246,0.1); padding: 8px 12px; border-radius: 8px; font-size: 0.76rem; color: #60a5fa; border: 1px solid rgba(59,130,246,0.2);">🗣️ Giờ chỉ cần nói <strong>"Hey Siri, ghi chi tiêu"</strong> bất cứ lúc nào!</p>
-              </div>
-            </details>
-
-            <details class="accordion-guide" style="margin-top: 10px;">
-              <summary class="accordion-header">
-                <div class="guide-summary-left">
-                  <span class="guide-icon">🤖</span>
-                  <div>
-                    <strong style="font-size:0.85rem;">Cách 4: MacroDroid (Android) — Tự động 100%</strong>
-                    <span class="text-muted" style="font-size:0.72rem; display:block;">Bắt Push Notification tự động, không cần thao tác</span>
-                  </div>
-                </div>
-                <span class="accordion-arrow">▼</span>
-              </summary>
-              <div class="setup-guide" style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; font-size: 0.8rem;">
-                <ol style="padding-left: 18px; line-height: 1.6; margin-bottom: 8px;">
-                  <li>Tải <strong>MacroDroid</strong> trên CH Play.</li>
-                  <li>Tạo Macro mới → <strong>Trigger</strong>: Chọn <em>Thông báo (Notification)</em> → Chọn App Ngân hàng.</li>
-                  <li><strong>Action</strong>: Chọn <em>Mạng → HTTP Request (GET)</em> → Dán Link Webhook và thêm tham số: <code>action=bankNotification&text={notification_text}&bank=Ngân hàng&member=dad</code></li>
-                </ol>
-                <p style="background: rgba(34,197,94,0.1); padding: 8px 12px; border-radius: 8px; font-size: 0.76rem; color: #4ade80; border: 1px solid rgba(34,197,94,0.2);">✅ Android bắt được Push Notification → <strong>tự động 100%</strong>, không cần thao tác gì!</p>
-              </div>
-            </details>
           </div>
         </div>
 
-        <!-- Data Management -->
+        <!-- ========== 4. NHẮC NHỞ ========== -->
+        <div class="settings-section">
+          <div class="chart-card">
+            <h3>🔔 Nhắc nhở nhập liệu</h3>
+            <p class="settings-desc">Nhận thông báo nếu chưa nhập giao dịch nào trước giờ đã đặt.</p>
+            <div id="notificationStatus" class="notification-status" style="display:none;"></div>
+            <button class="notification-permission-btn" id="enableNotifBtn" type="button">🔔 Bật thông báo</button>
+            <div class="reminder-member-list" id="reminderMemberList">
+              <!-- JS renders member reminder rows -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ========== 5. QUẢN LÝ DỮ LIỆU ========== -->
         <div class="settings-section">
           <div class="chart-card">
             <h3>🗃️ Quản lý dữ liệu</h3>
@@ -800,31 +763,6 @@
                 <input type="file" id="importJsonInput" accept=".json" style="display:none;">
               </label>
               <button class="btn-ghost btn-danger" id="clearDataBtn" type="button">🗑️ Xóa toàn bộ dữ liệu</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Member Management -->
-        <div class="settings-section">
-          <div class="chart-card">
-            <h3>👨‍👩‍👧‍👦 Quản lý thành viên</h3>
-            <p class="settings-desc">Thêm, sửa hoặc xóa thành viên trong gia đình.</p>
-            <div class="member-management-list" id="memberManagementList">
-              <!-- JS renders member rows -->
-            </div>
-            <button class="btn-primary" id="addMemberBtn" type="button" style="margin-top:16px;width:100%;">➕ Thêm thành viên</button>
-          </div>
-        </div>
-
-        <!-- Notification Reminders -->
-        <div class="settings-section">
-          <div class="chart-card">
-            <h3>🔔 Nhắc nhở nhập liệu</h3>
-            <p class="settings-desc">Nhận thông báo nếu chưa nhập giao dịch nào trước giờ đã đặt.</p>
-            <div id="notificationStatus" class="notification-status" style="display:none;"></div>
-            <button class="notification-permission-btn" id="enableNotifBtn" type="button">🔔 Bật thông báo</button>
-            <div class="reminder-member-list" id="reminderMemberList">
-              <!-- JS renders member reminder rows -->
             </div>
           </div>
         </div>

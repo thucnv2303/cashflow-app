@@ -966,7 +966,11 @@ body {
   }
 
   .family-greeting h1 {
-    font-size: 1.05rem;
+    font-size: 0.92rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
   }
 
   .family-avatars {
