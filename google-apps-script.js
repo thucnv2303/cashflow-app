@@ -134,6 +134,21 @@ function doGet(e) {
     const memberId = e.parameter.member || 'mom';
     return renderMemberPortalHtml(memberId);
   }
+
+  if (action === 'registerMemberEmail') {
+    const email = e.parameter.email || '';
+    const member = e.parameter.member || 'mom';
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let meSheet = ss.getSheetByName('MemberEmails');
+    if (!meSheet) {
+      meSheet = ss.insertSheet('MemberEmails');
+      meSheet.appendRow(['Email', 'Role', 'RegisteredAt', 'Status']);
+      meSheet.setFrozenRows(1);
+      meSheet.getRange('A1:D1').setFontWeight('bold');
+    }
+    meSheet.appendRow([email, member, new Date().toISOString(), 'active']);
+    return responseJson({ success: true, message: 'Đã đăng ký email ' + email }, cb);
+  }
   
   const lock = LockService.getScriptLock();
   try {
@@ -705,7 +720,31 @@ function scanMemberBankEmails(memberId) {
   return scanBankEmails(memberId || 'mom');
 }
 
-// Bật tự động chạy mỗi 1 phút trên Cloud Google
+// Trigger functions for each member role
+function triggerScanMom() { return scanBankEmails('mom'); }
+function triggerScanDad() { return scanBankEmails('dad'); }
+function triggerScanChild() { return scanBankEmails('child'); }
+function triggerScanOther() { return scanBankEmails('other'); }
+
+// Setup auto-trigger for a specific member
+function setupMemberTrigger(memberId) {
+  const funcName = 'triggerScan' + memberId.charAt(0).toUpperCase() + memberId.slice(1);
+  // Remove existing trigger for this member
+  const triggers = ScriptApp.getProjectTriggers();
+  for (let i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === funcName) {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  // Create new trigger every 5 minutes
+  ScriptApp.newTrigger(funcName)
+    .timeBased()
+    .everyMinutes(5)
+    .create();
+  return 'Đã thiết lập tự động quét mỗi 5 phút cho ' + memberId;
+}
+
+// Bật tự động chạy mỗi 1 phút trên Cloud Google (cho chủ tài khoản)
 function setupGmailTrigger() {
   const triggers = ScriptApp.getProjectTriggers();
   for (let i = 0; i < triggers.length; i++) {
@@ -722,58 +761,101 @@ function setupGmailTrigger() {
 
 // ==================== MEMBER AUTH & SCAN PORTAL HTML ====================
 function renderMemberPortalHtml(memberId) {
-  const label = memberId === 'mom' ? 'Mẹ Dâu 🌸' : (memberId === 'dad' ? 'Ba Dâu 👔' : 'Thành viên gia đình');
+  const label = memberId === 'mom' ? 'Vợ 🌸' : (memberId === 'dad' ? 'Chồng 👔' : (memberId === 'child' ? 'Con 🧒' : 'Thành viên gia đình'));
   const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CashFlow - Quét Email Ngân Hàng</title>
+  <title>CashFlow - Kích hoạt Quét Email</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 16px; box-sizing: border-box; }
     .card { background: #1e293b; border: 1px solid #334155; border-radius: 20px; padding: 28px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     .emoji { font-size: 3rem; margin-bottom: 12px; }
-    h1 { font-size: 1.35rem; margin: 0 0 8px 0; color: #f8fafc; }
-    p { font-size: 0.88rem; color: #94a3b8; line-height: 1.5; margin: 0 0 20px 0; }
+    h1 { font-size: 1.3rem; margin: 0 0 8px 0; color: #f8fafc; }
+    p { font-size: 0.85rem; color: #94a3b8; line-height: 1.5; margin: 0 0 20px 0; }
     .btn { background: #e77d3e; color: #fff; border: none; border-radius: 12px; padding: 14px 24px; font-size: 1rem; font-weight: 700; cursor: pointer; width: 100%; transition: 0.2s; box-shadow: 0 4px 14px rgba(231, 125, 62, 0.4); }
     .btn:hover { background: #d97706; transform: translateY(-1px); }
-    .status { margin-top: 18px; padding: 12px; border-radius: 10px; font-size: 0.85rem; display: none; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .status { margin-top: 18px; padding: 14px; border-radius: 10px; font-size: 0.85rem; display: none; line-height: 1.5; }
     .status.success { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
     .status.loading { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .status.error { background: rgba(248, 113, 113, 0.15); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.3); }
+    .steps { text-align: left; margin-top: 14px; font-size: 0.8rem; color: #94a3b8; line-height: 1.6; }
+    .steps .done { color: #4ade80; }
+    .steps .active { color: #60a5fa; font-weight: 600; }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="emoji">🌸</div>
-    <h1>Ủy quyền & Quét Email Ngân Hàng</h1>
-    <p>Đang đồng bộ cho: <strong>${label}</strong><br>Hệ thống sẽ quét các email biến động số dư từ VPBank, Techcombank, MB, VCB... trong Gmail của bạn và đưa vào sổ chi tiêu chung của gia đình.</p>
+    <h1>Kích hoạt Quét Email Ngân Hàng</h1>
+    <p>Xin chào <strong>${label}</strong>!<br>Bấm nút bên dưới để cho phép hệ thống đọc email biến động ngân hàng của bạn và đưa vào sổ chi tiêu gia đình.<br><em style="font-size:0.78rem;">Hệ thống chỉ đọc email từ ngân hàng, không đọc email cá nhân khác.</em></p>
     
-    <button class="btn" id="scanBtn" onclick="startScan()">🚀 Quét Email Ngân Hàng Của Tôi</button>
+    <button class="btn" id="scanBtn" onclick="startActivation()">🚀 Kích hoạt & Quét Email Ngân Hàng</button>
+    
     <div id="statusBox" class="status"></div>
+    
+    <div id="stepsBox" class="steps" style="display:none;">
+      <div id="step1">⬜ Bước 1: Cấp quyền đọc Gmail...</div>
+      <div id="step2">⬜ Bước 2: Quét email ngân hàng...</div>
+      <div id="step3">⬜ Bước 3: Thiết lập quét tự động 24/7...</div>
+    </div>
   </div>
 
   <script>
-    function startScan() {
+    function startActivation() {
       var btn = document.getElementById('scanBtn');
       var box = document.getElementById('statusBox');
+      var steps = document.getElementById('stepsBox');
       btn.disabled = true;
-      btn.textContent = 'Đang quét hòm thư Gmail... ⏳';
+      btn.textContent = 'Đang kích hoạt... ⏳';
+      steps.style.display = 'block';
+      
+      // Step 1: Permission (implicit when calling GmailApp)
+      document.getElementById('step1').innerHTML = '🔄 Bước 1: Đang xin cấp quyền đọc Gmail...';
+      document.getElementById('step1').className = 'active';
       box.style.display = 'block';
       box.className = 'status loading';
-      box.textContent = 'Đang tìm kiếm các thông báo ngân hàng mới nhất...';
-
+      box.textContent = 'Đang kết nối với Gmail của bạn...';
+      
+      // Step 2: Scan emails
       google.script.run
-        .withSuccessHandler(function(res) {
-          btn.disabled = false;
-          btn.textContent = '🔄 Quét lại';
-          box.className = 'status success';
-          box.innerHTML = '🎉 Đã quét xong!<br>Đã thêm ' + (res.addedCount || 0) + ' giao dịch mới vào sổ gia đình!';
+        .withSuccessHandler(function(scanRes) {
+          document.getElementById('step1').innerHTML = '✅ Bước 1: Đã cấp quyền đọc Gmail';
+          document.getElementById('step1').className = 'done';
+          document.getElementById('step2').innerHTML = '✅ Bước 2: Đã quét xong! Tìm thấy ' + (scanRes.addedCount || 0) + ' giao dịch mới';
+          document.getElementById('step2').className = 'done';
+          document.getElementById('step3').innerHTML = '🔄 Bước 3: Đang thiết lập quét tự động...';
+          document.getElementById('step3').className = 'active';
+          box.textContent = 'Đang thiết lập chế độ quét tự động 24/7...';
+          
+          // Step 3: Setup auto-trigger
+          google.script.run
+            .withSuccessHandler(function(triggerRes) {
+              document.getElementById('step3').innerHTML = '✅ Bước 3: Đã thiết lập quét tự động 24/7!';
+              document.getElementById('step3').className = 'done';
+              btn.disabled = false;
+              btn.textContent = '🔄 Quét lại ngay';
+              box.className = 'status success';
+              box.innerHTML = '🎉 <strong>Hoàn tất!</strong><br>Đã thêm ' + (scanRes.addedCount || 0) + ' giao dịch mới.<br>Hệ thống sẽ tự động quét email ngân hàng của bạn mỗi 5 phút.<br><br><strong>Bạn có thể đóng trang này.</strong> Mọi thứ đã được thiết lập xong!';
+            })
+            .withFailureHandler(function(err) {
+              document.getElementById('step3').innerHTML = '⚠️ Bước 3: Không thể tự động hóa (bạn có thể quét thủ công)';
+              btn.disabled = false;
+              btn.textContent = '🔄 Quét lại ngay';
+              box.className = 'status success';
+              box.innerHTML = '🎉 Đã quét xong ' + (scanRes.addedCount || 0) + ' giao dịch!<br>Lưu ý: Quét tự động chưa kích hoạt. Bạn có thể bấm nút để quét thủ công.';
+            })
+            .setupMemberTrigger('${memberId}');
         })
         .withFailureHandler(function(err) {
+          document.getElementById('step1').innerHTML = '✅ Bước 1: Đã cấp quyền';
+          document.getElementById('step1').className = 'done';
+          document.getElementById('step2').innerHTML = '❌ Bước 2: Lỗi khi quét';
           btn.disabled = false;
-          btn.textContent = 'Thử lại';
-          box.className = 'status loading';
-          box.style.color = '#f87171';
+          btn.textContent = '🔄 Thử lại';
+          box.className = 'status error';
           box.textContent = 'Lỗi: ' + err.toString();
         })
         .scanMemberBankEmails('${memberId}');
@@ -783,6 +865,6 @@ function renderMemberPortalHtml(memberId) {
 </html>`;
 
   return HtmlService.createHtmlOutput(html)
-    .setTitle('CashFlow - Quét Email Ngân Hàng')
+    .setTitle('CashFlow - Kích hoạt Quét Email')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

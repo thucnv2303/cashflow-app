@@ -152,8 +152,13 @@ function doGet(e) {
 }
 function scanBankEmails(targetMember){var member=targetMember||'dad',ss=SpreadsheetApp.getActiveSpreadsheet(),pSheet=ss.getSheetByName('PendingTransactions');if(!pSheet){setupSheet();pSheet=ss.getSheetByName('PendingTransactions');}var label=GmailApp.getUserLabelByName('CashFlow_Processed');if(!label){label=GmailApp.createLabel('CashFlow_Processed');}var queries=['from:(vpbank.com.vn OR techcombank.com.vn OR mbbank.com.vn OR vietcombank.com.vn OR timo.vn OR acb.com.vn OR vib.com.vn OR tpbank.com.vn OR bidv.com.vn OR cake.vn) -label:CashFlow_Processed newer_than:3d','subject:("Biến động số dư" OR "Thông báo giao dịch" OR "Transaction Alert" OR "Thông báo thay đổi số dư") -label:CashFlow_Processed newer_than:3d'],addedCount=0,processedThreadIds={};for(var q=0;q<queries.length;q++){var threads=GmailApp.search(queries[q],0,15);for(var i=0;i<threads.length;i++){var thread=threads[i];if(processedThreadIds[thread.getId()])continue;processedThreadIds[thread.getId()]=true;var messages=thread.getMessages();for(var j=0;j<messages.length;j++){var msg=messages[j],subject=msg.getSubject()||'',sender=msg.getFrom()||'',bodyText=msg.getPlainBody()||'',date=msg.getDate(),bank='Ngân hàng';if(/vpbank/i.test(sender)||/vpbank/i.test(subject)||/vpbank/i.test(bodyText))bank='VPBank';else if(/techcombank/i.test(sender)||/techcombank/i.test(subject))bank='Techcombank';else if(/mbbank|mb bank/i.test(sender)||/mbbank|mb bank/i.test(subject))bank='MB Bank';else if(/vietcombank|vcb/i.test(sender)||/vietcombank/i.test(subject))bank='Vietcombank';else if(/timo/i.test(sender)||/timo/i.test(subject))bank='Timo';else if(/acb/i.test(sender)||/acb/i.test(subject))bank='ACB';else if(/vib/i.test(sender)||/vib/i.test(subject))bank='VIB';else if(/tpbank/i.test(sender)||/tpbank/i.test(subject))bank='TPBank';else if(/bidv/i.test(sender)||/bidv/i.test(subject))bank='BIDV';else if(/cake/i.test(sender)||/cake/i.test(subject))bank='CAKE';else if(/momo/i.test(sender)||/momo/i.test(subject))bank='MoMo';var cls=classifyBankNotification(bodyText,subject,bank);if(cls.amount>0){var id='email_'+new Date().getTime()+'_'+Math.floor(Math.random()*1000),dateStr=date?date.toISOString():new Date().toISOString();pSheet.appendRow([id,bank,cls.type,cls.amount,cls.note||subject,cls.category,member,dateStr,'pending',dateStr]);addedCount++;}}thread.addLabel(label);}}return{success:true,addedCount:addedCount};}
 function scanMemberBankEmails(memberId){return scanBankEmails(memberId||'mom');}
-function setupGmailTrigger(){var triggers=ScriptApp.getProjectTriggers();for(var i=0;i<triggers.length;i++){if(triggers[i].getHandlerFunction()==='scanBankEmails'){ScriptApp.deleteTrigger(triggers[i]);}}ScriptApp.newTrigger('scanBankEmails').timeBased().everyMinutes(1).create();return'Đã thiết lập tự động quét Gmail mỗi 1 phút thành công!';}
-function renderMemberPortalHtml(memberId){var label=memberId==='mom'?'Mẹ Dâu 🌸':(memberId==='dad'?'Ba Dâu 👔':'Thành viên gia đình');var html='<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CashFlow - Quét Email</title><style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0f172a;color:#f8fafc;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:16px;box-sizing:border-box}.card{background:#1e293b;border:1px solid #334155;border-radius:20px;padding:28px;max-width:440px;width:100%;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.5)}.emoji{font-size:3rem;margin-bottom:12px}h1{font-size:1.35rem;margin:0 0 8px 0;color:#f8fafc}p{font-size:0.88rem;color:#94a3b8;line-height:1.5;margin:0 0 20px 0}.btn{background:#e77d3e;color:#fff;border:none;border-radius:12px;padding:14px 24px;font-size:1rem;font-weight:700;cursor:pointer;width:100%;box-shadow:0 4px 14px rgba(231,125,62,0.4)}.status{margin-top:18px;padding:12px;border-radius:10px;font-size:0.85rem;display:none}.status.success{background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.3)}.status.loading{background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3)}</style></head><body><div class="card"><div class="emoji">🌸</div><h1>Ủy quyền & Quét Email Ngân Hàng</h1><p>Đang đồng bộ cho: <strong>'+label+'</strong><br>Hệ thống sẽ quét các email biến động số dư trong Gmail của bạn và đưa vào sổ gia đình.</p><button class="btn" id="scanBtn" onclick="startScan()">🚀 Quét Email Ngân Hàng Của Tôi</button><div id="statusBox" class="status"></div></div><script>function startScan(){var btn=document.getElementById("scanBtn"),box=document.getElementById("statusBox");btn.disabled=true;btn.textContent="Đang quét hòm thư Gmail... ⏳";box.style.display="block";box.className="status loading";box.textContent="Đang tìm kiếm thông báo ngân hàng mới nhất...";google.script.run.withSuccessHandler(function(res){btn.disabled=false;btn.textContent="🔄 Quét lại";box.className="status success";box.innerHTML="🎉 Đã quét xong!<br>Đã thêm "+(res.addedCount||0)+" giao dịch mới vào sổ!";}).withFailureHandler(function(err){btn.disabled=false;btn.textContent="Thử lại";box.className="status loading";box.style.color="#f87171";box.textContent="Lỗi: "+err.toString();}).scanMemberBankEmails("'+memberId+'");}<\/script></body></html>';return HtmlService.createHtmlOutput(html).setTitle('CashFlow - Quét Email').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);}`;
+function triggerScanMom(){return scanBankEmails('mom');}
+function triggerScanDad(){return scanBankEmails('dad');}
+function triggerScanChild(){return scanBankEmails('child');}
+function triggerScanOther(){return scanBankEmails('other');}
+function setupMemberTrigger(memberId){var funcName='triggerScan'+memberId.charAt(0).toUpperCase()+memberId.slice(1);var triggers=ScriptApp.getProjectTriggers();for(var i=0;i<triggers.length;i++){if(triggers[i].getHandlerFunction()===funcName){ScriptApp.deleteTrigger(triggers[i]);}}ScriptApp.newTrigger(funcName).timeBased().everyMinutes(5).create();return'OK';}
+function setupGmailTrigger(){var triggers=ScriptApp.getProjectTriggers();for(var i=0;i<triggers.length;i++){if(triggers[i].getHandlerFunction()==='scanBankEmails'){ScriptApp.deleteTrigger(triggers[i]);}}ScriptApp.newTrigger('scanBankEmails').timeBased().everyMinutes(1).create();return'OK';}
+function renderMemberPortalHtml(memberId){var label=memberId==='mom'?'Vợ 🌸':(memberId==='dad'?'Chồng 👔':(memberId==='child'?'Con 🧒':'Thành viên'));var html='<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CashFlow - Kích hoạt</title><style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0f172a;color:#f8fafc;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:16px;box-sizing:border-box}.card{background:#1e293b;border:1px solid #334155;border-radius:20px;padding:28px;max-width:440px;width:100%;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,0.5)}.emoji{font-size:3rem;margin-bottom:12px}h1{font-size:1.3rem;margin:0 0 8px;color:#f8fafc}p{font-size:0.85rem;color:#94a3b8;line-height:1.5;margin:0 0 20px}.btn{background:#e77d3e;color:#fff;border:none;border-radius:12px;padding:14px 24px;font-size:1rem;font-weight:700;cursor:pointer;width:100%;box-shadow:0 4px 14px rgba(231,125,62,0.4)}.btn:disabled{opacity:0.6;cursor:not-allowed}.status{margin-top:18px;padding:14px;border-radius:10px;font-size:0.85rem;display:none;line-height:1.5}.status.success{background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.3)}.status.loading{background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3)}.status.error{background:rgba(248,113,113,0.15);color:#f87171;border:1px solid rgba(248,113,113,0.3)}.steps{text-align:left;margin-top:14px;font-size:0.8rem;color:#94a3b8;line-height:1.6}.steps .done{color:#4ade80}.steps .active{color:#60a5fa;font-weight:600}</style></head><body><div class="card"><div class="emoji">🌸</div><h1>Kích hoạt Quét Email Ngân Hàng</h1><p>Xin chào <strong>'+label+'</strong>!<br>Bấm nút bên dưới để cho phép hệ thống đọc email biến động ngân hàng và đưa vào sổ chi tiêu gia đình.<br><em style="font-size:0.78rem">Chỉ đọc email ngân hàng, không đọc email cá nhân.</em></p><button class="btn" id="scanBtn" onclick="go()">🚀 Kích hoạt & Quét Email Ngân Hàng</button><div id="statusBox" class="status"></div><div id="stepsBox" class="steps" style="display:none"><div id="s1">⬜ Bước 1: Cấp quyền đọc Gmail...</div><div id="s2">⬜ Bước 2: Quét email ngân hàng...</div><div id="s3">⬜ Bước 3: Thiết lập quét tự động 24/7...</div></div></div><script>function go(){var b=document.getElementById("scanBtn"),x=document.getElementById("statusBox"),st=document.getElementById("stepsBox");b.disabled=true;b.textContent="Đang kích hoạt... ⏳";st.style.display="block";document.getElementById("s1").innerHTML="🔄 Bước 1: Đang xin cấp quyền...";document.getElementById("s1").className="active";x.style.display="block";x.className="status loading";x.textContent="Đang kết nối Gmail...";google.script.run.withSuccessHandler(function(r){document.getElementById("s1").innerHTML="✅ Bước 1: Đã cấp quyền";document.getElementById("s1").className="done";document.getElementById("s2").innerHTML="✅ Bước 2: Tìm thấy "+(r.addedCount||0)+" giao dịch mới";document.getElementById("s2").className="done";document.getElementById("s3").innerHTML="🔄 Bước 3: Đang thiết lập tự động...";document.getElementById("s3").className="active";x.textContent="Đang thiết lập quét tự động 24/7...";google.script.run.withSuccessHandler(function(){document.getElementById("s3").innerHTML="✅ Bước 3: Đã thiết lập quét tự động!";document.getElementById("s3").className="done";b.disabled=false;b.textContent="🔄 Quét lại";x.className="status success";x.innerHTML="🎉 <strong>Hoàn tất!</strong><br>Đã thêm "+(r.addedCount||0)+" giao dịch.<br>Hệ thống sẽ tự quét mỗi 5 phút.<br><br><strong>Bạn có thể đóng trang này.</strong>";}).withFailureHandler(function(){document.getElementById("s3").innerHTML="⚠️ Bước 3: Chưa tự động hóa được";b.disabled=false;b.textContent="🔄 Quét lại";x.className="status success";x.innerHTML="🎉 Đã quét "+(r.addedCount||0)+" giao dịch!<br>Bạn có thể bấm nút để quét thủ công.";}).setupMemberTrigger("'+memberId+'");}).withFailureHandler(function(e){document.getElementById("s1").innerHTML="✅ Bước 1: OK";document.getElementById("s1").className="done";document.getElementById("s2").innerHTML="❌ Lỗi";b.disabled=false;b.textContent="🔄 Thử lại";x.className="status error";x.textContent="Lỗi: "+e;}).scanMemberBankEmails("'+memberId+'");}<\/script></body></html>';return HtmlService.createHtmlOutput(html).setTitle('CashFlow - Kích hoạt').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);}`;
 
 // ==================== MAIN APP ====================
 const App = {
@@ -927,17 +932,43 @@ const App = {
     
     // Webhook URL
     const webhookInput = document.getElementById('webhookUrlInput');
-    const wifePortalInput = document.getElementById('wifePortalUrlInput');
     const url = Storage.getApiUrl();
     if (webhookInput) {
       webhookInput.value = url ? `${url}?action=bankNotification` : 'Vui lòng kết nối Google Sheets trước để nhận link Webhook cá nhân';
     }
-    if (wifePortalInput) {
-      wifePortalInput.value = url ? `${url}?action=portal&member=mom` : 'Vui lòng kết nối Google Sheets trước để nhận link';
-    }
 
+    this.renderMemberEmailList();
     this.renderMemberManagement();
     this.renderReminderSettings();
+  },
+
+  renderMemberEmailList() {
+    const container = document.getElementById('memberEmailList');
+    if (!container) return;
+    const memberEmails = JSON.parse(localStorage.getItem('cashflow_member_emails') || '[]');
+    if (memberEmails.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+    const roleLabels = { mom: '🌸 Vợ', dad: '👔 Chồng', child: '🧒 Con', other: '👤 Khác' };
+    container.innerHTML = memberEmails.map((m, i) => `
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px; margin-bottom:4px; background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.2); border-radius:8px; font-size:0.78rem;">
+        <div style="flex:1;">
+          <span style="font-weight:600;">${roleLabels[m.role] || '👤'}</span>
+          <span style="color:var(--text-secondary); margin-left:6px;">${m.email}</span>
+          <span style="color:#4ade80; font-size:0.68rem; margin-left:6px;">✅ Đã kích hoạt</span>
+        </div>
+        <button type="button" class="btn-ghost" style="font-size:0.7rem; padding:2px 8px; color:#f87171;" onclick="App.removeMemberEmail(${i})">✕</button>
+      </div>
+    `).join('');
+  },
+
+  removeMemberEmail(index) {
+    const memberEmails = JSON.parse(localStorage.getItem('cashflow_member_emails') || '[]');
+    memberEmails.splice(index, 1);
+    localStorage.setItem('cashflow_member_emails', JSON.stringify(memberEmails));
+    this.renderMemberEmailList();
+    this.showToast('Đã xóa email thành viên');
   },
 
   // ==================== MEMBER MANAGEMENT ====================
@@ -2703,17 +2734,42 @@ const App = {
       }
     });
 
-    document.getElementById('copyWifePortalBtn')?.addEventListener('click', () => {
-      const input = document.getElementById('wifePortalUrlInput');
-      if (input && input.value) {
-        navigator.clipboard.writeText(input.value).then(() => {
-          this.showToast('Đã sao chép link Quét Gmail của Vợ! 🌸 Gửi qua Zalo/Tin nhắn cho vợ nhé');
-        }).catch(() => {
-          input.select();
-          document.execCommand('copy');
-          this.showToast('Đã sao chép link Quét Gmail của Vợ! 🌸');
-        });
+    document.getElementById('activateMemberEmailBtn')?.addEventListener('click', () => {
+      const emailInput = document.getElementById('memberEmailInput');
+      const roleSelect = document.getElementById('memberRoleSelect');
+      const email = (emailInput?.value || '').trim();
+      const role = roleSelect?.value || 'mom';
+      if (!email || !email.includes('@')) {
+        this.showToast('⚠️ Vui lòng nhập địa chỉ email hợp lệ');
+        emailInput?.focus();
+        return;
       }
+      const url = Storage.getApiUrl();
+      if (!url) {
+        this.showToast('⚠️ Vui lòng kết nối Google Sheets trước');
+        return;
+      }
+      // Save member email to local storage
+      const memberEmails = JSON.parse(localStorage.getItem('cashflow_member_emails') || '[]');
+      const existing = memberEmails.findIndex(m => m.email === email);
+      if (existing > -1) {
+        memberEmails[existing].role = role;
+        memberEmails[existing].activatedAt = new Date().toISOString();
+      } else {
+        memberEmails.push({ email, role, activatedAt: new Date().toISOString(), status: 'pending' });
+      }
+      localStorage.setItem('cashflow_member_emails', JSON.stringify(memberEmails));
+      // Also save to Google Sheet
+      fetch(`${url}?action=registerMemberEmail&email=${encodeURIComponent(email)}&member=${role}`);
+      // Open portal for 1-time authorization
+      const portalUrl = `${url}?action=portal&member=${role}`;
+      const roleLabels = { mom: 'Vợ 🌸', dad: 'Chồng 👔', child: 'Con 🧒', other: 'Thành viên 👤' };
+      this.showToast(`✅ Đã đăng ký email ${email} cho ${roleLabels[role] || role}! Đang mở trang xác nhận...`);
+      setTimeout(() => {
+        window.open(portalUrl, '_blank');
+      }, 800);
+      emailInput.value = '';
+      this.renderMemberEmailList();
     });
 
     document.getElementById('testWebhookBtn')?.addEventListener('click', () => this.handleTestWebhook());

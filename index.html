@@ -640,14 +640,27 @@
               <small class="text-muted" style="font-size:0.72rem; display:block; margin-top:4px;">Dùng link này dán vào app MacroDroid (Android) hoặc Shortcuts (iOS) để tự động bắn thông báo về App.</small>
             </div>
 
-            <!-- Wife 1-Tap Portal Link -->
-            <div class="form-group" style="margin-top: 12px; background: rgba(231, 125, 62, 0.08); border: 1px dashed var(--primary); padding: 12px; border-radius: 10px;">
-              <label style="font-weight: 700; color: var(--primary);">🌸 Link 1-Chạm Quét Gmail gửi cho Vợ (Mẹ Dâu):</label>
-              <div style="display: flex; gap: 8px; margin-top: 6px;">
-                <input type="text" id="wifePortalUrlInput" class="filter-input" readonly style="flex: 1; font-size: 0.78rem; background: var(--surface);">
-                <button type="button" class="btn-primary" id="copyWifePortalBtn" style="font-size: 0.8rem; white-space: nowrap;">📲 Copy gửi Vợ</button>
+            <!-- Member Email Registration (1-Tap Setup) -->
+            <div class="form-group" style="margin-top: 12px; background: rgba(231, 125, 62, 0.08); border: 1px dashed var(--primary); padding: 14px; border-radius: 10px;">
+              <label style="font-weight: 700; color: var(--primary); font-size: 0.88rem;">👨‍👩‍👧‍👦 Thêm Email Biến Động Số Dư Cho Thành Viên</label>
+              <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 4px 0 10px 0; line-height: 1.45;">Vợ/chồng/thành viên chỉ cần nhập email Gmail nhận biến động ngân hàng vào đây và bấm <strong>Kích hoạt</strong>. Hệ thống sẽ tự quét email ngân hàng 24/7 đưa vào sổ gia đình!</p>
+
+              <div id="memberEmailList"></div>
+
+              <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06);">
+                <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-primary);">📧 Email nhận biến động số dư:</label>
+                <div style="display: flex; gap: 8px; margin-top: 6px; align-items: center;">
+                  <input type="email" id="memberEmailInput" class="filter-input" placeholder="Ví dụ: vominh@gmail.com" style="flex: 1; font-size: 0.82rem;">
+                  <select id="memberRoleSelect" class="filter-input" style="width: 110px; font-size: 0.78rem;">
+                    <option value="mom">Vợ 🌸</option>
+                    <option value="dad">Chồng 👔</option>
+                    <option value="child">Con 🧒</option>
+                    <option value="other">Khác 👤</option>
+                  </select>
+                </div>
+                <button type="button" class="btn-primary" id="activateMemberEmailBtn" style="font-size: 0.82rem; padding: 10px 16px; margin-top: 8px; width: 100%; background: #e77d3e;">🚀 Kích hoạt Quét Email Tự Động</button>
+                <small class="text-muted" style="font-size: 0.7rem; display:block; margin-top:6px; line-height: 1.4;">Khi bấm Kích hoạt, hệ thống sẽ mở trang xác nhận quyền đọc Gmail <strong>1 lần duy nhất</strong>. Sau đó email ngân hàng sẽ được quét tự động 24/7 mà không cần thao tác thêm.</small>
               </div>
-              <small class="text-muted" style="font-size:0.72rem; display:block; margin-top:4px;">Gửi link này qua Zalo/Tin nhắn cho Vợ. Vợ chỉ cần bấm vào link trên điện thoại là hòm thư Gmail của Vợ sẽ tự động quét email ngân hàng và đưa vào sổ chi tiêu chung của gia đình mà không cần cài app/phím tắt nào!</small>
             </div>
 
             <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
