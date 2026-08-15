@@ -896,12 +896,12 @@ body {
     bottom: 0;
     left: 0;
     width: 100%;
-    height: calc(60px + env(safe-area-inset-bottom, 0px));
+    height: calc(56px + env(safe-area-inset-bottom, 0px));
     flex-direction: row;
     border-right: none;
     border-top: 1px solid var(--border);
     padding: 0 4px env(safe-area-inset-bottom, 0px) 4px;
-    box-shadow: 0 -4px 20px var(--shadow);
+    box-shadow: 0 -3px 16px var(--shadow);
     background: var(--bg-secondary);
     z-index: 999;
   }
@@ -917,13 +917,13 @@ body {
     align-items: center;
     padding: 0;
     width: 100%;
-    height: 60px;
+    height: 56px;
   }
   .nav-item {
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
     margin: 0;
-    padding: 6px 8px;
+    padding: 4px 6px;
     background: none !important;
     border: none !important;
     flex: 1;
@@ -931,10 +931,10 @@ body {
     justify-content: center;
   }
   .nav-icon {
-    font-size: 1.25rem;
+    font-size: 1.15rem;
   }
   .nav-label {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 500;
   }
   .nav-item.active {
@@ -945,116 +945,281 @@ body {
   .main-content {
     margin-left: 0;
     margin-bottom: 0;
-    padding: 12px 14px calc(76px + env(safe-area-inset-bottom, 10px)) 14px;
+    padding: 8px 10px calc(66px + env(safe-area-inset-bottom, 10px)) 10px;
   }
 
+  /* Hide redundant mobile-controls bar at top */
   .mobile-controls {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 14px;
+    display: none !important;
   }
 
-  /* 2x2 grid for mobile - compact and easy to read */
-  .summary-grid, .analytics-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-
-  .summary-card {
-    padding: 12px;
-    gap: 10px;
-    border-radius: 14px;
-  }
-
-  .summary-card .card-icon {
-    padding: 8px;
-    font-size: 18px;
-    border-radius: 10px;
-  }
-
-  .card-label {
-    font-size: 0.78rem;
-  }
-
-  .card-value {
-    font-size: 1.05rem;
-  }
-
-  .card-change {
-    font-size: 0.75rem;
-    padding: 1px 6px;
-  }
-
-  .analytics-card {
-    padding: 14px;
-  }
-
-  .analytics-value {
-    font-size: 1.2rem;
-  }
-  
   .page-header {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 16px;
+    gap: 8px;
+    margin-bottom: 8px;
   }
 
   .page-header h1 {
-    font-size: 1.3rem;
-  }
-
-  .family-greeting h1 {
     font-size: 1.15rem;
   }
 
-  .month-selector {
-    padding: 6px 12px;
-    font-size: 0.85rem;
-    gap: 10px;
-  }
-  
-  .fab {
-    bottom: calc(76px + env(safe-area-inset-bottom, 10px));
-    right: 16px;
-    width: 52px;
-    height: 52px;
-    font-size: 24px;
-    z-index: 998;
-  }
-  
-  .filter-bar {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 16px;
+  .family-greeting h1 {
+    font-size: 1.05rem;
   }
 
-  .filter-group label {
+  .family-avatars {
+    margin-top: 2px;
+    gap: -4px;
+  }
+
+  .family-avatar {
+    width: 26px;
+    height: 26px;
+  }
+
+  .month-selector {
+    padding: 4px 8px;
+    font-size: 0.78rem;
+    gap: 6px;
+    border-radius: 12px;
+  }
+
+  .month-btn {
+    width: 24px;
+    height: 24px;
     font-size: 0.75rem;
   }
 
+  /* Ultra compact mood banner */
+  .mood-card {
+    flex-direction: row !important;
+    align-items: center !important;
+    text-align: left !important;
+    padding: 8px 12px !important;
+    gap: 10px !important;
+    margin-bottom: 8px !important;
+    border-radius: 12px !important;
+  }
+
+  .mood-emoji {
+    font-size: 1.5rem !important;
+    line-height: 1;
+  }
+
+  .mood-status {
+    font-size: 0.88rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .mood-desc {
+    font-size: 0.72rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .tip-item {
+    padding: 6px 10px !important;
+    margin-bottom: 8px !important;
+    font-size: 0.75rem !important;
+    border-radius: 10px !important;
+    gap: 6px !important;
+  }
+
+  .tip-emoji {
+    font-size: 1rem !important;
+  }
+
+  /* Ultra-compact 2x2 grid for mobile */
+  .summary-grid, .analytics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 6px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .summary-card {
+    padding: 8px 10px !important;
+    gap: 8px !important;
+    border-radius: 12px !important;
+    align-items: center !important;
+  }
+
+  .summary-card .card-icon {
+    padding: 6px !important;
+    font-size: 15px !important;
+    border-radius: 8px !important;
+  }
+
+  .card-info {
+    gap: 1px !important;
+  }
+
+  .card-label {
+    font-size: 0.68rem !important;
+  }
+
+  .card-value {
+    font-size: 0.92rem !important;
+    font-weight: 700 !important;
+  }
+
+  .card-change {
+    font-size: 0.65rem !important;
+    padding: 0 4px !important;
+  }
+
+  .analytics-card {
+    padding: 8px 10px !important;
+    border-radius: 12px !important;
+  }
+
+  .analytics-label {
+    font-size: 0.68rem !important;
+  }
+
+  .analytics-value {
+    font-size: 0.95rem !important;
+  }
+
+  /* Recent transactions on dashboard */
+  .recent-card {
+    padding: 10px 12px !important;
+    border-radius: 12px !important;
+  }
+
+  .recent-card h3 {
+    font-size: 0.88rem !important;
+    margin-bottom: 8px !important;
+  }
+
+  .recent-list {
+    gap: 6px !important;
+  }
+
+  .recent-item {
+    padding: 6px 8px !important;
+    gap: 8px !important;
+    border-radius: 10px !important;
+  }
+
+  .recent-icon {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 14px !important;
+    border-radius: 8px !important;
+  }
+
+  .recent-title {
+    font-size: 0.78rem !important;
+  }
+
+  .recent-date {
+    font-size: 0.68rem !important;
+  }
+
+  .recent-amount {
+    font-size: 0.85rem !important;
+  }
+  
+  /* FAB button */
+  .fab {
+    bottom: calc(66px + env(safe-area-inset-bottom, 10px));
+    right: 14px;
+    width: 48px;
+    height: 48px;
+    font-size: 22px;
+    z-index: 998;
+  }
+
+  /* Hide redundant "+ Thêm giao dịch" on mobile */
+  #page-transactions .page-header #addTransactionBtn {
+    display: none !important;
+  }
+  
+  /* Ultra-compact filter bar */
+  .filter-bar {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+    padding: 6px 8px !important;
+    border-radius: 10px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .filter-group {
+    gap: 0 !important;
+  }
+
+  .filter-group label {
+    display: none !important;
+  }
+
   .filter-input {
-    padding: 8px 10px;
-    font-size: 0.85rem;
+    padding: 4px 6px !important;
+    font-size: 0.78rem !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+    width: 100% !important;
   }
 
   .table-container {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    border-radius: 14px;
-    margin-bottom: 16px;
+    border-radius: 10px !important;
+    margin-bottom: 8px !important;
   }
 
   .transactions-table {
-    min-width: 540px;
-    font-size: 0.85rem;
+    min-width: 420px;
+    font-size: 0.78rem;
   }
 
   .transactions-table th, .transactions-table td {
-    padding: 10px 8px;
+    padding: 6px 6px !important;
+  }
+
+  /* Hide redundant "Loại" column on mobile (amount color already indicates +/-) */
+  .transactions-table th:nth-child(3),
+  .transactions-table td:nth-child(3) {
+    display: none !important;
+  }
+
+  /* Loans page mobile */
+  .loan-summary-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .loan-summary-card {
+    padding: 8px 4px !important;
+    text-align: center !important;
+    border-radius: 10px !important;
+  }
+
+  .loan-summary-label {
+    font-size: 0.65rem !important;
+  }
+
+  .loan-summary-value {
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
+  }
+
+  .loan-card {
+    padding: 10px 12px !important;
+    border-radius: 12px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .loan-stats {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 4px !important;
+  }
+
+  .loan-stat-item {
+    font-size: 0.72rem !important;
   }
 
   /* Bottom sheet pattern for modals on mobile */
@@ -1066,8 +1231,8 @@ body {
   .modal {
     width: 100%;
     max-width: 100%;
-    border-radius: 24px 24px 0 0;
-    padding: 20px 18px calc(24px + env(safe-area-inset-bottom, 12px)) 18px;
+    border-radius: 20px 20px 0 0;
+    padding: 16px 14px calc(20px + env(safe-area-inset-bottom, 12px)) 14px;
     max-height: 88vh;
     overflow-y: auto;
     transform: translateY(100%);
@@ -1079,46 +1244,46 @@ body {
 
   .category-grid {
     grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
+    gap: 4px;
   }
 
   .category-item {
-    padding: 8px 4px;
-    font-size: 0.75rem;
+    padding: 6px 2px;
+    font-size: 0.72rem;
   }
 
   .category-icon {
-    font-size: 1.3rem;
+    font-size: 1.2rem;
   }
 
   .top-category-item {
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 4px;
   }
 
   .top-cat-info {
-    min-width: 80px;
+    min-width: 75px;
   }
 
   .top-cat-values {
-    min-width: 70px;
+    min-width: 65px;
   }
 
   .chart-container {
-    height: 220px;
+    height: 190px;
   }
 
   .chart-wide {
-    height: 250px;
+    height: 210px;
   }
 
   .chart-card canvas {
-    max-height: 220px;
+    max-height: 190px;
   }
 
   .charts-grid {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 10px;
   }
 
   .avatar-presets-grid {
@@ -1815,16 +1980,6 @@ html[data-theme='light'] input[type="date"]::-webkit-calendar-picker-indicator {
 .avatar-option:hover {
   background: var(--surface-hover);
   transform: scale(1.15);
-}
-
-@media (max-width: 768px) {
-  .loan-summary-grid { grid-template-columns: 1fr; }
-  .form-row { grid-template-columns: 1fr; }
-  .loan-type-grid { grid-template-columns: repeat(3, 1fr); }
-  .loan-stats { grid-template-columns: 1fr; }
-  .family-greeting h1 { font-size: 1.2rem; }
-  .mood-card { flex-direction: column; text-align: center; }
-  .mood-emoji { font-size: 2.5rem; }
 }
 
 /* ==================== Avatar Images ==================== */
