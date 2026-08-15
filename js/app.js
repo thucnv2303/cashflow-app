@@ -2502,6 +2502,68 @@ const App = {
     }
   },
 
+  // ==================== QUICK BANK ENTRY ====================
+  _quickEntryType: 'expense',
+  _quickEntryCat: 'food',
+
+  openQuickEntry() {
+    const modal = document.getElementById('quickEntryModal');
+    if (modal) {
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => { document.getElementById('quickAmount')?.focus(); }, 200);
+    }
+  },
+
+  closeQuickEntry() {
+    const modal = document.getElementById('quickEntryModal');
+    if (modal) {
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+      document.getElementById('quickAmount').value = '';
+      document.getElementById('quickNote').value = '';
+    }
+  },
+
+  submitQuickEntry() {
+    const amountInput = document.getElementById('quickAmount');
+    const noteInput = document.getElementById('quickNote');
+    const amount = Number(amountInput?.value || 0);
+    if (!amount || amount <= 0) {
+      this.showToast('⚠️ Vui lòng nhập số tiền');
+      amountInput?.focus();
+      return;
+    }
+
+    const typeBtn = document.querySelector('.quick-type-btn.active');
+    const catChip = document.querySelector('.quick-cat-chip.active');
+    const type = typeBtn?.dataset?.qtype || 'expense';
+    const category = catChip?.dataset?.qcat || 'other_expense';
+    const note = noteInput?.value || '';
+
+    const transaction = {
+      id: 'quick_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+      type,
+      amount,
+      category,
+      note: note || `Nhập nhanh từ thông báo`,
+      date: new Date().toISOString().slice(0, 10),
+      memberId: Storage.getAllMembers()[0]?.id || 'dad',
+      createdAt: new Date().toISOString(),
+      beneficiaryId: ''
+    };
+
+    Storage.addTransaction(transaction);
+    this.closeQuickEntry();
+    this.showToast(`✅ Đã ghi nhận ${type === 'income' ? 'thu' : 'chi'} ${formatCurrency(amount)}!`);
+    this.renderCurrentPage();
+
+    // Also sync to Google Sheets if online
+    if (Storage.isOnline()) {
+      Storage._sheetApiCall('add', { data: JSON.stringify(transaction) }).catch(() => {});
+    }
+  },
+
   _simulateLocalBankNotification(sample) {
     const fullText = (sample.title + ' ' + sample.text + ' ' + sample.bank).toLowerCase();
     let amount = 55000;
@@ -2774,6 +2836,20 @@ const App = {
 
     document.getElementById('testWebhookBtn')?.addEventListener('click', () => this.handleTestWebhook());
     document.getElementById('scanGmailBtn')?.addEventListener('click', () => this.handleScanGmail());
+
+    // Quick Bank Entry
+    document.getElementById('quickEntryBtn')?.addEventListener('click', () => this.openQuickEntry());
+    document.getElementById('quickEntryClose')?.addEventListener('click', () => this.closeQuickEntry());
+    document.getElementById('quickEntryModal')?.addEventListener('click', (e) => { if (e.target.id === 'quickEntryModal') this.closeQuickEntry(); });
+    document.querySelectorAll('.quick-type-btn').forEach(b => b.addEventListener('click', () => {
+      document.querySelectorAll('.quick-type-btn').forEach(x => { x.classList.remove('active'); x.style.borderColor = 'var(--border)'; x.style.background = 'transparent'; x.style.color = 'var(--text-secondary)'; });
+      b.classList.add('active'); b.style.borderColor = 'var(--primary)'; b.style.background = 'rgba(231,125,62,0.15)'; b.style.color = 'var(--primary)';
+    }));
+    document.querySelectorAll('.quick-cat-chip').forEach(c => c.addEventListener('click', () => {
+      document.querySelectorAll('.quick-cat-chip').forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+    }));
+    document.getElementById('quickEntrySubmit')?.addEventListener('click', () => this.submitQuickEntry());
 
     // Transaction modal
     document.getElementById('addTransactionBtn')?.addEventListener('click', (e) => { e.stopPropagation(); this.openModal(); });

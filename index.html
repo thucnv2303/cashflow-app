@@ -155,6 +155,18 @@
             <span>👉</span> Phân bổ ngay
           </button>
         </div>
+
+        <!-- Quick Bank Entry Button -->
+        <div class="quick-bank-entry" id="quickBankEntry" style="margin-bottom: 12px;">
+          <button type="button" class="quick-entry-btn" id="quickEntryBtn">
+            <span class="quick-entry-icon">⚡</span>
+            <div class="quick-entry-text">
+              <strong>Nhập nhanh giao dịch ngân hàng</strong>
+              <small>Nhận thông báo? Bấm đây ghi ngay!</small>
+            </div>
+            <span class="quick-entry-arrow">→</span>
+          </button>
+        </div>
         
         <!-- Summary Cards (Clickable for drilldown popup) -->
         <div class="summary-grid">
@@ -695,24 +707,83 @@
                 <div class="guide-summary-left">
                   <span class="guide-icon">📱</span>
                   <div>
-                    <strong style="font-size:0.85rem;">Cách 2: Cài đặt qua App MacroDroid (Android) hoặc Phím tắt (iPhone)</strong>
-                    <span class="text-muted" style="font-size:0.72rem; display:block;">Nhận biến động qua SMS hoặc Notification</span>
+                    <strong style="font-size:0.85rem;">Cách 2: Tự ghi khi mở App ngân hàng (iPhone) ⭐ Khuyên dùng</strong>
+                    <span class="text-muted" style="font-size:0.72rem; display:block;">Tự hiện ô nhập khi bạn bấm vào thông báo ngân hàng</span>
                   </div>
                 </div>
                 <span class="accordion-arrow">▼</span>
               </summary>
               <div class="setup-guide" style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; font-size: 0.8rem;">
-                <p><strong>Dành cho Android (MacroDroid):</strong></p>
+                <p><strong>🍎 Dành cho iPhone (iOS 16+):</strong></p>
+                <p style="color: var(--text-secondary); font-size: 0.76rem; margin-bottom: 8px;">Khi nhận thông báo ngân hàng → bạn bấm vào thông báo → App ngân hàng mở → <strong>Shortcuts tự hiện lên hỏi số tiền</strong> → Gõ số → Xong!</p>
+                <ol style="padding-left: 18px; line-height: 1.7; margin-bottom: 10px;">
+                  <li>Mở app <strong>Phím tắt (Shortcuts)</strong> → Tab <strong>Tự động hóa</strong> → Bấm <strong>+</strong></li>
+                  <li>Chọn <strong>"Ứng dụng"</strong> → Tìm và chọn <strong>App ngân hàng</strong> của bạn (VPBank, TCB, MB...) → Chọn <strong>"Được mở"</strong> → <strong>Tiếp</strong></li>
+                  <li>Chọn <strong>"Phím tắt mới"</strong> → Thêm các tác vụ theo thứ tự:
+                    <ul style="margin: 6px 0; padding-left: 16px; line-height: 1.6;">
+                      <li><strong>Yêu cầu đầu vào</strong> → Đặt câu hỏi: <em>"Nhập số tiền giao dịch:"</em> → Loại: <strong>Số</strong></li>
+                      <li><strong>Lấy nội dung của URL</strong> → Dán link Webhook (copy ở trên) → Phương thức: <strong>GET</strong></li>
+                      <li>Bấm vào URL và thêm tham số:
+                        <br>• <code>action</code> = <code>bankNotification</code>
+                        <br>• <code>text</code> = <code>Chi [Đầu vào đã cung cấp]</code>
+                        <br>• <code>bank</code> = <code>Tên ngân hàng</code>
+                        <br>• <code>member</code> = <code>dad</code> (hoặc <code>mom</code>)
+                      </li>
+                    </ul>
+                  </li>
+                  <li>Bấm <strong>Xong</strong>. Chọn <strong>"Chạy ngay sau khi xác nhận"</strong> hoặc <strong>"Chạy ngay"</strong></li>
+                </ol>
+                <p style="background: rgba(34,197,94,0.1); padding: 8px 12px; border-radius: 8px; font-size: 0.76rem; color: #4ade80; border: 1px solid rgba(34,197,94,0.2);">✅ <strong>Xong!</strong> Từ nay mỗi khi bấm thông báo ngân hàng, Shortcuts tự bật lên hỏi số tiền. Gõ số → tự ghi vào CashFlow!</p>
+              </div>
+            </details>
+
+            <details class="accordion-guide" style="margin-top: 10px;">
+              <summary class="accordion-header">
+                <div class="guide-summary-left">
+                  <span class="guide-icon">🗣️</span>
+                  <div>
+                    <strong style="font-size:0.85rem;">Cách 3: "Hey Siri, ghi chi tiêu" (không cần mở khóa)</strong>
+                    <span class="text-muted" style="font-size:0.72rem; display:block;">Điều khiển bằng giọng nói, tay không chạm màn hình</span>
+                  </div>
+                </div>
+                <span class="accordion-arrow">▼</span>
+              </summary>
+              <div class="setup-guide" style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; font-size: 0.8rem;">
+                <p style="color: var(--text-secondary); font-size: 0.76rem; margin-bottom: 8px;">Nhận thông báo ngân hàng → Nói <strong>"Hey Siri, ghi chi tiêu"</strong> → Siri hỏi số tiền → Nói số → Xong! Hoạt động cả khi <strong>đang khóa màn hình</strong>.</p>
+                <ol style="padding-left: 18px; line-height: 1.7; margin-bottom: 10px;">
+                  <li>Mở app <strong>Phím tắt</strong> → Tab <strong>Phím tắt</strong> (không phải Tự động hóa) → Bấm <strong>+</strong></li>
+                  <li>Đặt tên: <strong>"Ghi chi tiêu"</strong></li>
+                  <li>Thêm các tác vụ:
+                    <ul style="margin: 6px 0; padding-left: 16px; line-height: 1.6;">
+                      <li><strong>Yêu cầu đầu vào</strong> → Câu hỏi: <em>"Số tiền bao nhiêu?"</em> → Loại: <strong>Số</strong></li>
+                      <li><strong>Lấy nội dung của URL</strong> → Dán link Webhook → Phương thức: <strong>GET</strong></li>
+                      <li>Tham số URL: <code>action=bankNotification</code>, <code>text=Chi [Đầu vào]</code>, <code>member=dad</code></li>
+                    </ul>
+                  </li>
+                  <li>Bấm <strong>Xong</strong></li>
+                </ol>
+                <p style="background: rgba(59,130,246,0.1); padding: 8px 12px; border-radius: 8px; font-size: 0.76rem; color: #60a5fa; border: 1px solid rgba(59,130,246,0.2);">🗣️ Giờ chỉ cần nói <strong>"Hey Siri, ghi chi tiêu"</strong> bất cứ lúc nào!</p>
+              </div>
+            </details>
+
+            <details class="accordion-guide" style="margin-top: 10px;">
+              <summary class="accordion-header">
+                <div class="guide-summary-left">
+                  <span class="guide-icon">🤖</span>
+                  <div>
+                    <strong style="font-size:0.85rem;">Cách 4: MacroDroid (Android) — Tự động 100%</strong>
+                    <span class="text-muted" style="font-size:0.72rem; display:block;">Bắt Push Notification tự động, không cần thao tác</span>
+                  </div>
+                </div>
+                <span class="accordion-arrow">▼</span>
+              </summary>
+              <div class="setup-guide" style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; font-size: 0.8rem;">
                 <ol style="padding-left: 18px; line-height: 1.6; margin-bottom: 8px;">
                   <li>Tải <strong>MacroDroid</strong> trên CH Play.</li>
-                  <li>Tạo Macro mới → <strong>Trigger</strong>: Chọn <em>Thông báo (Notification)</em> từ các App Ngân hàng.</li>
-                  <li><strong>Action</strong>: Chọn <em>Mạng → HTTP Request (POST)</em> → Dán Link Webhook vào.</li>
+                  <li>Tạo Macro mới → <strong>Trigger</strong>: Chọn <em>Thông báo (Notification)</em> → Chọn App Ngân hàng.</li>
+                  <li><strong>Action</strong>: Chọn <em>Mạng → HTTP Request (GET)</em> → Dán Link Webhook và thêm tham số: <code>action=bankNotification&text={notification_text}&bank=Ngân hàng&member=dad</code></li>
                 </ol>
-                <p><strong>Dành cho iPhone (iOS Shortcuts / Phím tắt SMS):</strong></p>
-                <ol style="padding-left: 18px; line-height: 1.6;">
-                  <li>Mở app <strong>Phím tắt</strong> → Tab <em>Tự động hóa</em> → Tạo mới khi nhận Tin nhắn ngân hàng.</li>
-                  <li>Thêm tác vụ <strong>Lấy nội dung từ URL (POST)</strong> gửi nội dung tin nhắn về Webhook URL.</li>
-                </ol>
+                <p style="background: rgba(34,197,94,0.1); padding: 8px 12px; border-radius: 8px; font-size: 0.76rem; color: #4ade80; border: 1px solid rgba(34,197,94,0.2);">✅ Android bắt được Push Notification → <strong>tự động 100%</strong>, không cần thao tác gì!</p>
               </div>
             </details>
           </div>
@@ -764,6 +835,56 @@
     <button class="fab" id="fabAdd" title="Thêm giao dịch">
       <span>+</span>
     </button>
+
+    <!-- Quick Bank Entry Modal -->
+    <div class="modal-overlay" id="quickEntryModal">
+      <div class="modal" style="max-width: 420px;">
+        <div class="modal-header">
+          <h2>⚡ Nhập nhanh từ Thông báo</h2>
+          <button class="btn-close" id="quickEntryClose">✕</button>
+        </div>
+        <div style="padding: 16px;">
+          <!-- Amount Input - BIG -->
+          <div style="text-align: center; margin-bottom: 16px;">
+            <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 6px;">Số tiền giao dịch</label>
+            <input type="number" id="quickAmount" inputmode="numeric" placeholder="150000" 
+              style="font-size: 2rem; font-weight: 700; text-align: center; width: 100%; padding: 14px; border: 2px solid var(--primary); border-radius: 14px; background: var(--surface); color: var(--text-primary); outline: none;">
+            <small style="color: var(--text-secondary); font-size: 0.72rem;">Gõ số tiền trên thông báo ngân hàng</small>
+          </div>
+
+          <!-- Transaction Type -->
+          <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+            <button type="button" class="quick-type-btn active" data-qtype="expense" style="flex:1; padding: 10px; border-radius: 10px; border: 2px solid var(--primary); background: rgba(231,125,62,0.15); color: var(--primary); font-weight: 600; font-size: 0.85rem; cursor: pointer;">📤 Chi tiêu</button>
+            <button type="button" class="quick-type-btn" data-qtype="income" style="flex:1; padding: 10px; border-radius: 10px; border: 2px solid var(--border); background: transparent; color: var(--text-secondary); font-weight: 600; font-size: 0.85rem; cursor: pointer;">📥 Thu nhập</button>
+          </div>
+
+          <!-- Quick Category Chips -->
+          <div style="margin-bottom: 14px;">
+            <label style="font-size: 0.78rem; color: var(--text-secondary); display: block; margin-bottom: 6px;">Danh mục nhanh:</label>
+            <div id="quickCategoryChips" style="display: flex; flex-wrap: wrap; gap: 6px;">
+              <button type="button" class="quick-cat-chip active" data-qcat="food">🍜 Ăn uống</button>
+              <button type="button" class="quick-cat-chip" data-qcat="shopping">🛒 Mua sắm</button>
+              <button type="button" class="quick-cat-chip" data-qcat="transport">🚗 Di chuyển</button>
+              <button type="button" class="quick-cat-chip" data-qcat="bills">📄 Hóa đơn</button>
+              <button type="button" class="quick-cat-chip" data-qcat="health">🏥 Y tế</button>
+              <button type="button" class="quick-cat-chip" data-qcat="education">📚 Giáo dục</button>
+              <button type="button" class="quick-cat-chip" data-qcat="entertainment">🎬 Giải trí</button>
+              <button type="button" class="quick-cat-chip" data-qcat="other_expense">📦 Khác</button>
+            </div>
+          </div>
+
+          <!-- Note (optional) -->
+          <div style="margin-bottom: 16px;">
+            <input type="text" id="quickNote" placeholder="Ghi chú (không bắt buộc)" class="filter-input" style="width: 100%; font-size: 0.82rem;">
+          </div>
+
+          <!-- Submit -->
+          <button type="button" id="quickEntrySubmit" style="width: 100%; padding: 14px; border-radius: 12px; border: none; background: var(--primary); color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(231,125,62,0.3);">
+            ✅ Ghi nhận giao dịch
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Transaction Modal -->
     <div class="modal-overlay" id="transactionModal">
