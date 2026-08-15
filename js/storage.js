@@ -7,6 +7,7 @@ const MEMBERS_KEY = 'cashflow_members';
 const FAMILY_NAME_KEY = 'cashflow_family_name';
 const SETUP_DONE_KEY = 'cashflow_setup_done';
 const LOANS_KEY = 'cashflow_loans';
+const REMINDER_KEY = 'cashflow_reminders';
 
 const Storage = {
   // ==================== CONFIG ====================
@@ -23,7 +24,7 @@ const Storage = {
   setFamilyName(name) { localStorage.setItem(FAMILY_NAME_KEY, name); },
 
   // ==================== THEME ====================
-  getTheme() { return localStorage.getItem(THEME_KEY) || 'dark'; },
+  getTheme() { return localStorage.getItem(THEME_KEY) || 'light'; },
   setTheme(theme) { localStorage.setItem(THEME_KEY, theme); },
 
   // ==================== MEMBERS CRUD ====================
@@ -114,12 +115,42 @@ const Storage = {
     for (const key in params) {
       fetchUrl += `&${key}=${encodeURIComponent(typeof params[key] === 'object' ? JSON.stringify(params[key]) : params[key])}`;
     }
-    const response = await fetch(fetchUrl);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    
+    // Google Apps Script redirects 302 → googleusercontent.com
+    // fetch() mặc định follow redirect nhưng đôi khi CORS chặn
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    
+    try {
+      const response = await fetch(fetchUrl, {
+        method: 'GET',
+        redirect: 'follow',
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      
+      // Đọc response text trước, parse JSON sau (tránh lỗi parse)
+      const text = await response.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        // Nếu response là HTML (trang lỗi), báo rõ
+        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+          throw new Error('Google Apps Script trả về trang HTML thay vì JSON. Kiểm tra lại URL deploy.');
+        }
+        throw new Error('Phản hồi không phải JSON hợp lệ');
+      }
+    } catch (error) {
+      clearTimeout(timeout);
+      if (error.name === 'AbortError') {
+        throw new Error('Quá thời gian kết nối (20s). Kiểm tra lại URL.');
+      }
+      // Thông báo lỗi rõ ràng hơn
+      if (error.message === 'Failed to fetch') {
+        throw new Error('Không thể kết nối. Kiểm tra: (1) URL đúng, (2) Deploy quyền "Anyone", (3) Đã chạy setupSheet()');
+      }
+      throw error;
     }
-    const result = await response.json();
-    return result;
   },
 
   async testConnection() {

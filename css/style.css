@@ -25,27 +25,27 @@
 }
 
 html[data-theme='light'] {
-  --bg-primary: #faf5ff;
+  --bg-primary: #fef7ed;
   --bg-secondary: #ffffff;
-  --surface: rgba(255, 255, 255, 0.8);
-  --surface-hover: rgba(255, 255, 255, 0.95);
-  --border: rgba(0, 0, 0, 0.08);
-  --border-hover: rgba(0, 0, 0, 0.15);
-  --text-primary: #1e1b4b;
-  --text-secondary: #4f46e5;
-  --text-muted: #9ca3af;
-  --primary: #8b5cf6;
-  --primary-glow: rgba(139, 92, 246, 0.2);
-  --accent-pink: #ec4899;
-  --accent-amber: #f59e0b;
-  --income: #10b981;
-  --income-bg: rgba(16, 185, 129, 0.1);
-  --expense: #ef4444;
-  --expense-bg: rgba(239, 68, 68, 0.1);
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --shadow: rgba(0, 0, 0, 0.08);
-  --family-gradient: linear-gradient(135deg, #8b5cf6, #ec4899, #f59e0b);
+  --surface: rgba(255, 255, 255, 0.9);
+  --surface-hover: rgba(255, 237, 213, 0.6);
+  --border: rgba(194, 152, 108, 0.2);
+  --border-hover: rgba(194, 152, 108, 0.35);
+  --text-primary: #44291a;
+  --text-secondary: #8b6f5c;
+  --text-muted: #b8a090;
+  --primary: #e77d3e;
+  --primary-glow: rgba(231, 125, 62, 0.2);
+  --accent-pink: #e8658b;
+  --accent-amber: #d9983a;
+  --income: #2d9d6f;
+  --income-bg: rgba(45, 157, 111, 0.12);
+  --expense: #d94f4f;
+  --expense-bg: rgba(217, 79, 79, 0.1);
+  --danger: #d94f4f;
+  --warning: #d9983a;
+  --shadow: rgba(120, 80, 40, 0.08);
+  --family-gradient: linear-gradient(135deg, #e77d3e, #e8658b, #d9983a);
 }
 
 * {
@@ -1697,3 +1697,238 @@ html[data-theme='light'] input[type="date"]::-webkit-calendar-picker-indicator {
   .mood-emoji { font-size: 2.5rem; }
 }
 
+/* ==================== Avatar Images ==================== */
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.avatar-img-sm {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.avatar-picker {
+  overflow: hidden;
+}
+
+.avatar-picker .avatar-img {
+  width: 100%;
+  height: 100%;
+}
+
+.avatar-popover {
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 8px !important;
+  padding: 12px !important;
+}
+
+.avatar-option {
+  width: auto !important;
+  height: auto !important;
+  padding: 8px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 4px !important;
+  border-radius: 12px !important;
+}
+
+.avatar-option img.avatar-img {
+  width: 44px;
+  height: 44px;
+}
+
+.avatar-option span {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.member-avatar {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.member-avatar .avatar-img {
+  width: 36px;
+  height: 36px;
+}
+
+.member-btn .member-avatar {
+  font-size: 1rem;
+}
+
+.family-avatar {
+  overflow: hidden;
+}
+
+.family-avatar .avatar-img {
+  width: 100%;
+  height: 100%;
+}
+
+/* ==================== Notification Settings ==================== */
+.reminder-settings {
+  margin-top: 24px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.reminder-settings h3 {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reminder-member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reminder-member-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--surface-hover);
+  border-radius: 12px;
+}
+
+.reminder-member-row .member-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.reminder-member-row .member-info img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.reminder-member-row .reminder-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reminder-member-row input[type="time"] {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.reminder-member-row .reminder-toggle {
+  position: relative;
+  width: 42px;
+  height: 24px;
+}
+
+.reminder-member-row .reminder-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.reminder-member-row .reminder-toggle .slider {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.reminder-member-row .reminder-toggle .slider::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: 0.3s;
+}
+
+.reminder-member-row .reminder-toggle input:checked + .slider {
+  background: var(--primary);
+}
+
+.reminder-member-row .reminder-toggle input:checked + .slider::before {
+  transform: translateX(18px);
+}
+
+.notification-permission-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--family-gradient);
+  color: white;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 16px;
+  transition: opacity 0.2s;
+}
+
+.notification-permission-btn:hover {
+  opacity: 0.9;
+}
+
+.notification-status {
+  text-align: center;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.notification-status.granted {
+  background: var(--income-bg);
+  color: var(--income);
+}
+
+.notification-status.denied {
+  background: var(--expense-bg);
+  color: var(--expense);
+}
+
+/* ==================== Light Mode Surface Enhancement ==================== */
+html[data-theme='light'] .summary-card,
+html[data-theme='light'] .mood-card,
+html[data-theme='light'] .loan-card,
+html[data-theme='light'] .tip-item,
+html[data-theme='light'] .chart-card,
+html[data-theme='light'] .recent-item {
+  box-shadow: 0 2px 12px rgba(120, 80, 40, 0.06);
+}
+
+html[data-theme='light'] .sidebar {
+  background: #fff8f0;
+  border-color: rgba(194, 152, 108, 0.15);
+}
+
+html[data-theme='light'] .modal {
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(120, 80, 40, 0.15);
+}

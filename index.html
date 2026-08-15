@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi" data-theme="dark">
+<html lang="vi" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -486,6 +486,19 @@
                 <input type="file" id="importJsonInput" accept=".json" style="display:none;">
               </label>
               <button class="btn-ghost btn-danger" id="clearDataBtn" type="button">🗑️ Xóa toàn bộ dữ liệu</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notification Reminders -->
+        <div class="settings-section">
+          <div class="chart-card">
+            <h3>🔔 Nhắc nhở nhập liệu</h3>
+            <p class="settings-desc">Nhận thông báo nếu chưa nhập giao dịch nào trước giờ đã đặt. Mỗi thành viên cài đặt riêng.</p>
+            <div id="notificationStatus" class="notification-status" style="display:none;"></div>
+            <button class="notification-permission-btn" id="enableNotifBtn" type="button">🔔 Bật thông báo</button>
+            <div class="reminder-member-list" id="reminderMemberList">
+              <!-- JS renders member reminder rows -->
             </div>
           </div>
         </div>

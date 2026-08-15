@@ -26,17 +26,22 @@ const CHART_COLORS = [
   '#a29bfe', '#55efc4', '#ff7675', '#ffeaa7'
 ];
 
-// Avatar System
+// Avatar System - Cute illustrated avatars via DiceBear API
+const AVATAR_STYLE = 'adventurer'; // cute illustrated style
+function getAvatarUrl(seed) {
+  return `https://api.dicebear.com/9.x/${AVATAR_STYLE}/svg?seed=${encodeURIComponent(seed)}&backgroundColor=transparent`;
+}
+
 const AVATARS = [
-  { id: 'avatar_man', emoji: '👨', label: 'Anh' },
-  { id: 'avatar_woman', emoji: '👩', label: 'Chị' },
-  { id: 'avatar_boy', emoji: '👦', label: 'Con trai' },
-  { id: 'avatar_girl', emoji: '👧', label: 'Con gái' },
-  { id: 'avatar_grandpa', emoji: '👴', label: 'Ông' },
-  { id: 'avatar_grandma', emoji: '👵', label: 'Bà' },
+  { id: 'avatar_dad', emoji: '👨', label: 'Bố', seed: 'dad-cashflow', img: getAvatarUrl('dad-family') },
+  { id: 'avatar_mom', emoji: '👩', label: 'Mẹ', seed: 'mom-cashflow', img: getAvatarUrl('mom-family') },
+  { id: 'avatar_son', emoji: '👦', label: 'Con trai', seed: 'son-cashflow', img: getAvatarUrl('boy-family') },
+  { id: 'avatar_daughter', emoji: '👧', label: 'Con gái', seed: 'girl-cashflow', img: getAvatarUrl('girl-family') },
+  { id: 'avatar_grandpa', emoji: '👴', label: 'Ông', seed: 'grandpa-cashflow', img: getAvatarUrl('grandpa-family') },
+  { id: 'avatar_grandma', emoji: '👵', label: 'Bà', seed: 'grandma-cashflow', img: getAvatarUrl('grandma-family') },
 ];
 
-const MEMBER_COLORS = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444'];
+const MEMBER_COLORS = ['#e77d3e', '#e8658b', '#d9983a', '#2d9d6f', '#5b8def', '#d94f4f'];
 
 // Loan Emojis
 const LOAN_TYPES = [

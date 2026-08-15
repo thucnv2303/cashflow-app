@@ -84,6 +84,11 @@ const App = {
     } else {
       this.renderCurrentPage();
     }
+    // Init notifications
+    if ('Notification' in window && Notification.permission === 'granted') {
+      this.registerServiceWorker();
+      this.scheduleReminderCheck();
+    }
   },
 
   // ==================== SETUP WIZARD ====================
@@ -91,8 +96,8 @@ const App = {
     const modal = document.getElementById('setupModal');
     if (modal) modal.classList.add('active');
     this.setupMemberRows = [
-      { avatar: '👨', name: '' },
-      { avatar: '👩', name: '' }
+      { avatarId: 'avatar_dad', name: '' },
+      { avatarId: 'avatar_mom', name: '' }
     ];
     this.renderSetupMembers();
   },
@@ -100,13 +105,15 @@ const App = {
   renderSetupMembers() {
     const list = document.getElementById('setupMemberList');
     if (!list) return;
-    list.innerHTML = this.setupMemberRows.map((m, i) => `
+    list.innerHTML = this.setupMemberRows.map((m, i) => {
+      const av = AVATARS.find(a => a.id === m.avatarId) || AVATARS[0];
+      return `
       <div class="setup-member-row" data-index="${i}">
-        <button type="button" class="avatar-picker" data-index="${i}">${m.avatar}</button>
+        <button type="button" class="avatar-picker" data-index="${i}"><img src="${av.img}" alt="${av.label}" class="avatar-img"></button>
         <input type="text" value="${m.name}" placeholder="Tên thành viên" class="setup-member-name" data-index="${i}">
         ${this.setupMemberRows.length > 1 ? `<button type="button" class="remove-member-btn" data-index="${i}">✕</button>` : ''}
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   },
 
   handleSetupSubmit(e) {
@@ -120,9 +127,12 @@ const App = {
     this.setupMemberRows.forEach((row, i) => {
       const name = nameInputs[i]?.value?.trim();
       if (name) {
+        const av = AVATARS.find(a => a.id === row.avatarId) || AVATARS[i % AVATARS.length];
         members.push({
           name,
-          avatar: row.avatar,
+          avatarId: row.avatarId,
+          avatar: av.emoji,
+          avatarImg: av.img,
           color: MEMBER_COLORS[i % MEMBER_COLORS.length]
         });
       }
@@ -141,12 +151,11 @@ const App = {
   },
 
   showAvatarPicker(index, button) {
-    // Close any existing popover
     document.querySelectorAll('.avatar-popover').forEach(p => p.remove());
     const popover = document.createElement('div');
     popover.className = 'avatar-popover';
     popover.innerHTML = AVATARS.map(a =>
-      `<button type="button" class="avatar-option" data-emoji="${a.emoji}" data-index="${index}">${a.emoji}</button>`
+      `<button type="button" class="avatar-option" data-avatar-id="${a.id}" data-index="${index}"><img src="${a.img}" alt="${a.label}" class="avatar-img"><span>${a.label}</span></button>`
     ).join('');
     button.parentElement.style.position = 'relative';
     button.parentElement.appendChild(popover);
@@ -155,8 +164,10 @@ const App = {
       const opt = ev.target.closest('.avatar-option');
       if (opt) {
         const idx = parseInt(opt.dataset.index);
-        this.setupMemberRows[idx].avatar = opt.dataset.emoji;
-        button.textContent = opt.dataset.emoji;
+        const avId = opt.dataset.avatarId;
+        const av = AVATARS.find(a => a.id === avId);
+        this.setupMemberRows[idx].avatarId = avId;
+        button.innerHTML = `<img src="${av.img}" alt="${av.label}" class="avatar-img">`;
         popover.remove();
       }
     });
@@ -320,9 +331,10 @@ const App = {
     const container = document.getElementById('familyAvatars');
     if (!container) return;
     const members = Storage.getMembers();
-    container.innerHTML = members.map(m =>
-      `<div class="family-avatar" style="border-color: ${m.color}" title="${m.name}">${m.avatar}</div>`
-    ).join('');
+    container.innerHTML = members.map(m => {
+      const imgSrc = m.avatarImg || (AVATARS.find(a => a.id === m.avatarId) || AVATARS[0]).img;
+      return `<div class="family-avatar" style="border-color: ${m.color}" title="${m.name}"><img src="${imgSrc}" alt="${m.name}" class="avatar-img"></div>`;
+    }).join('');
   },
 
   updateChangeBadge(id, change, invert) {
@@ -491,6 +503,136 @@ const App = {
     if (ac) ac.style.display = Storage.getSyncMode() === 'sheets' ? 'block' : 'none';
     if (au) au.value = Storage.getApiUrl();
     if (Storage.isOnline()) { const sa = document.getElementById('syncActions'); if(sa) sa.style.display = 'flex'; }
+    this.renderReminderSettings();
+  },
+
+  // ==================== NOTIFICATIONS ====================
+  renderReminderSettings() {
+    const list = document.getElementById('reminderMemberList');
+    const statusEl = document.getElementById('notificationStatus');
+    const btn = document.getElementById('enableNotifBtn');
+    if (!list) return;
+
+    // Show notification permission status
+    if ('Notification' in window) {
+      const perm = Notification.permission;
+      if (perm === 'granted') {
+        if (statusEl) { statusEl.style.display = 'block'; statusEl.className = 'notification-status granted'; statusEl.textContent = '✅ Đã bật thông báo'; }
+        if (btn) btn.style.display = 'none';
+      } else if (perm === 'denied') {
+        if (statusEl) { statusEl.style.display = 'block'; statusEl.className = 'notification-status denied'; statusEl.textContent = '❌ Thông báo bị chặn. Vào cài đặt trình duyệt để bật lại.'; }
+        if (btn) btn.style.display = 'none';
+      } else {
+        if (statusEl) statusEl.style.display = 'none';
+        if (btn) btn.style.display = 'block';
+      }
+    } else {
+      if (statusEl) { statusEl.style.display = 'block'; statusEl.className = 'notification-status denied'; statusEl.textContent = 'Trình duyệt không hỗ trợ thông báo'; }
+      if (btn) btn.style.display = 'none';
+    }
+
+    // Render member reminder rows
+    const members = Storage.getMembers();
+    const reminders = JSON.parse(localStorage.getItem(REMINDER_KEY) || '{}');
+    list.innerHTML = members.map(m => {
+      const reminder = reminders[m.id] || { enabled: false, time: '21:00' };
+      const imgSrc = m.avatarImg || (AVATARS.find(a => a.id === m.avatarId) || AVATARS[0]).img;
+      return `
+        <div class="reminder-member-row">
+          <div class="member-info">
+            <img src="${imgSrc}" alt="${m.name}">
+            <span>${m.name}</span>
+          </div>
+          <div class="reminder-time">
+            <span>Nhắc lúc</span>
+            <input type="time" value="${reminder.time}" data-member="${m.id}" class="reminder-time-input">
+          </div>
+          <label class="reminder-toggle">
+            <input type="checkbox" ${reminder.enabled ? 'checked' : ''} data-member="${m.id}" class="reminder-toggle-input">
+            <span class="slider"></span>
+          </label>
+        </div>`;
+    }).join('');
+  },
+
+  async requestNotificationPermission() {
+    if (!('Notification' in window)) {
+      this.showToast('Trình duyệt không hỗ trợ', 'error');
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') {
+      this.showToast('Đã bật thông báo! 🔔');
+      // Register service worker for background checks
+      this.registerServiceWorker();
+    } else {
+      this.showToast('Thông báo bị từ chối', 'error');
+    }
+    this.renderReminderSettings();
+  },
+
+  async registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      try {
+        await navigator.serviceWorker.register('./sw.js');
+      } catch (e) {
+        console.warn('SW registration failed:', e);
+      }
+    }
+  },
+
+  saveReminderSettings(memberId, field, value) {
+    const reminders = JSON.parse(localStorage.getItem(REMINDER_KEY) || '{}');
+    if (!reminders[memberId]) reminders[memberId] = { enabled: false, time: '21:00' };
+    reminders[memberId][field] = value;
+    localStorage.setItem(REMINDER_KEY, JSON.stringify(reminders));
+    // Schedule check
+    this.scheduleReminderCheck();
+  },
+
+  scheduleReminderCheck() {
+    // Clear existing timer
+    if (this._reminderTimer) clearTimeout(this._reminderTimer);
+    const reminders = JSON.parse(localStorage.getItem(REMINDER_KEY) || '{}');
+    const now = new Date();
+    let nearest = null;
+
+    for (const memberId in reminders) {
+      const r = reminders[memberId];
+      if (!r.enabled) continue;
+      const [h, min] = r.time.split(':').map(Number);
+      const target = new Date(now);
+      target.setHours(h, min, 0, 0);
+      if (target <= now) target.setDate(target.getDate() + 1); // tomorrow
+      if (!nearest || target < nearest.time) {
+        nearest = { memberId, time: target };
+      }
+    }
+
+    if (nearest) {
+      const delay = nearest.time - now;
+      this._reminderTimer = setTimeout(() => this.fireReminder(nearest.memberId), delay);
+    }
+  },
+
+  fireReminder(memberId) {
+    // Check if any transaction was added today by this member
+    const today = new Date().toISOString().split('T')[0];
+    const txs = Storage.getLocal();
+    const hasTodayTx = txs.some(t => t.date === today && t.memberId === memberId);
+
+    if (!hasTodayTx) {
+      const member = Storage.getMemberById(memberId);
+      const name = member ? member.name : 'Bạn';
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('CashFlow - Nhắc nhở 📝', {
+          body: `${name} ơi, hôm nay chưa nhập giao dịch nào. Đừng quên ghi chép nhé!`,
+          icon: member?.avatarImg || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💰</text></svg>'
+        });
+      }
+    }
+    // Reschedule for next day
+    this.scheduleReminderCheck();
   },
 
   async handleTestConnection() {
@@ -596,12 +738,14 @@ const App = {
   renderMemberSelector() {
     const c = document.getElementById('memberSelector'); if(!c) return;
     const members = Storage.getMembers();
-    c.innerHTML = members.map(m => `
+    c.innerHTML = members.map(m => {
+      const imgSrc = m.avatarImg || (AVATARS.find(a => a.id === m.avatarId) || AVATARS[0]).img;
+      return `
       <button type="button" class="member-btn ${this.selectedMemberId === m.id ? 'active' : ''}" data-id="${m.id}" style="--member-color:${m.color}">
-        <span class="member-avatar">${m.avatar}</span>
+        <span class="member-avatar"><img src="${imgSrc}" alt="${m.name}" class="avatar-img"></span>
         <span>${m.name}</span>
-      </button>
-    `).join('');
+      </button>`;
+    }).join('');
   },
 
   closeModal() {
@@ -731,7 +875,7 @@ const App = {
   renderTransactionRow(t) {
     const cat = getCategoryById(t.category);
     const member = t.memberId ? Storage.getMemberById(t.memberId) : null;
-    const memberBadge = member ? `<span class="family-avatar" style="border-color:${member.color};width:24px;height:24px;font-size:0.8rem;display:inline-flex">${member.avatar}</span>` : '';
+    const memberBadge = member ? `<span class="family-avatar" style="border-color:${member.color};width:28px;height:28px;display:inline-flex"><img src="${member.avatarImg || (AVATARS.find(a => a.id === member.avatarId) || AVATARS[0]).img}" alt="${member.name}" class="avatar-img"></span>` : '';
     return `<tr>
       <td>${formatDate(t.date)}</td>
       <td>${memberBadge}</td>
@@ -750,7 +894,7 @@ const App = {
     return `<div class="recent-item">
       <div class="recent-icon">${cat?cat.emoji:'📦'}</div>
       <div class="recent-info">
-        <div class="recent-title">${member?member.avatar+' ':''} ${cat?cat.label:'Khác'}${t.note?' · '+t.note:''}</div>
+        <div class="recent-title">${member?`<img src="${member.avatarImg || (AVATARS.find(a => a.id === member.avatarId) || AVATARS[0]).img}" class="avatar-img-sm"> `:''} ${cat?cat.label:'Khác'}${t.note?' · '+t.note:''}</div>
         <div class="recent-date">${formatDate(t.date)}</div>
       </div>
       <div class="recent-amount ${isInc?'income':'expense'}">${isInc?'+':'-'}${formatCurrency(t.amount)}</div>
@@ -818,7 +962,7 @@ const App = {
     document.getElementById('setupForm')?.addEventListener('submit', (e) => this.handleSetupSubmit(e));
     document.getElementById('addSetupMember')?.addEventListener('click', () => {
       if (this.setupMemberRows.length < 6) {
-        this.setupMemberRows.push({ avatar: AVATARS[this.setupMemberRows.length % AVATARS.length].emoji, name: '' });
+        this.setupMemberRows.push({ avatarId: AVATARS[this.setupMemberRows.length % AVATARS.length].id, name: '' });
         this.renderSetupMembers();
       } else { this.showToast('Tối đa 6 thành viên','error'); }
     });
@@ -832,6 +976,16 @@ const App = {
     document.getElementById('setupMemberList')?.addEventListener('input', (e) => {
       if (e.target.classList.contains('setup-member-name')) {
         this.setupMemberRows[parseInt(e.target.dataset.index)].name = e.target.value;
+      }
+    });
+    // Notification settings
+    document.getElementById('enableNotifBtn')?.addEventListener('click', () => this.requestNotificationPermission());
+    document.getElementById('reminderMemberList')?.addEventListener('change', (e) => {
+      if (e.target.classList.contains('reminder-time-input')) {
+        this.saveReminderSettings(e.target.dataset.member, 'time', e.target.value);
+      }
+      if (e.target.classList.contains('reminder-toggle-input')) {
+        this.saveReminderSettings(e.target.dataset.member, 'enabled', e.target.checked);
       }
     });
     // Escape key
