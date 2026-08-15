@@ -538,6 +538,11 @@ function doGet(e) {
       }
       return responseJson({ success: true, message: 'Đã bỏ qua giao dịch' }, cb);
     }
+
+    if (action === 'scanGmail') {
+      const res = scanBankEmails();
+      return responseJson({ success: true, addedCount: res.addedCount, message: 'Đã quét xong Gmail! Đã thêm ' + res.addedCount + ' giao dịch mới.' }, cb);
+    }
     
     return responseJson({ success: false, error: 'Hành động không hợp lệ' }, cb);
     
@@ -554,18 +559,19 @@ function classifyBankNotification(rawText, title, bank) {
   
   // 1. Extract Amount
   let amount = 0;
-  const amtMatch = rawText.match(/(?:[\+\-]|gd:?\s*[\+\-]?|ps:?\s*[\+\-]?)?\s*([\d\.\,]{3,15})\s*(?:vnd|vnđ|đ|d\b)/i) ||
+  const amtMatch = rawText.match(/(?:Số tiền|Số tiền GD|So tien|Giá trị GD|Số tiền giao dịch|Số dư thay đổi|PS|GD)[\:\s]*([\+\-]?\s*[\d\.\,]{3,15})\s*(?:vnd|vnđ|đ|d\b)/i) ||
+                   rawText.match(/(?:[\+\-]|gd:?\s*[\+\-]?|ps:?\s*[\+\-]?)?\s*([\d\.\,]{3,15})\s*(?:vnd|vnđ|đ|d\b)/i) ||
                    rawText.match(/([\d\.\,]{4,15})\s*(?:vnd|vnđ|đ|d\b)/i);
   if (amtMatch && amtMatch[1]) {
-    const cleanNum = amtMatch[1].replace(/[\.\,]/g, '');
+    const cleanNum = amtMatch[1].replace(/[\.\,\s\+\-]/g, '');
     amount = Number(cleanNum) || 0;
   }
 
   // 2. Extract Type
   let type = 'expense';
-  if (rawText.includes('+') || fullText.includes('nhan tien') || fullText.includes('nhận tiền') || fullText.includes('cong tien') || fullText.includes('cộng tiền') || fullText.includes('credit')) {
+  if (rawText.includes('+') || fullText.includes('nhan tien') || fullText.includes('nhận tiền') || fullText.includes('cong tien') || fullText.includes('cộng tiền') || fullText.includes('credit') || fullText.includes('tang so du')) {
     type = 'income';
-  } else if (rawText.includes('-') || fullText.includes('tru tien') || fullText.includes('trừ tiền') || fullText.includes('thanh toan') || fullText.includes('thanh toán') || fullText.includes('debit')) {
+  } else if (rawText.includes('-') || fullText.includes('tru tien') || fullText.includes('trừ tiền') || fullText.includes('thanh toan') || fullText.includes('thanh toán') || fullText.includes('debit') || fullText.includes('giam so du')) {
     type = 'expense';
   }
 
@@ -603,7 +609,7 @@ function classifyBankNotification(rawText, title, bank) {
   }
 
   // 4. Clean note
-  let cleanNote = rawText.replace(/\r?\n|\r/g, ' ').slice(0, 100);
+  let cleanNote = rawText.replace(/\r?\n|\r/g, ' ').replace(/\s+/g, ' ').slice(0, 120);
 
   return {
     amount: amount,
@@ -611,4 +617,95 @@ function classifyBankNotification(rawText, title, bank) {
     category: category,
     note: cleanNote
   };
+}
+
+// ==================== GMAIL CLOUD AUTO-SCAN ====================
+function scanBankEmails() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let pSheet = ss.getSheetByName('PendingTransactions');
+  if (!pSheet) {
+    setupSheet();
+    pSheet = ss.getSheetByName('PendingTransactions');
+  }
+
+  let label = GmailApp.getUserLabelByName('CashFlow_Processed');
+  if (!label) {
+    label = GmailApp.createLabel('CashFlow_Processed');
+  }
+
+  const queries = [
+    'from:(vpbank.com.vn OR techcombank.com.vn OR mbbank.com.vn OR vietcombank.com.vn OR timo.vn OR acb.com.vn OR vib.com.vn OR tpbank.com.vn OR bidv.com.vn OR cake.vn) -label:CashFlow_Processed newer_than:3d',
+    'subject:("Biến động số dư" OR "Thông báo giao dịch" OR "Transaction Alert" OR "Thông báo thay đổi số dư") -label:CashFlow_Processed newer_than:3d'
+  ];
+
+  let addedCount = 0;
+  const processedThreadIds = {};
+
+  for (let q = 0; q < queries.length; q++) {
+    const threads = GmailApp.search(queries[q], 0, 15);
+    for (let i = 0; i < threads.length; i++) {
+      const thread = threads[i];
+      if (processedThreadIds[thread.getId()]) continue;
+      processedThreadIds[thread.getId()] = true;
+
+      const messages = thread.getMessages();
+      for (let j = 0; j < messages.length; j++) {
+        const msg = messages[j];
+        const subject = msg.getSubject() || '';
+        const sender = msg.getFrom() || '';
+        const bodyText = msg.getPlainBody() || '';
+        const date = msg.getDate();
+
+        let bank = 'Ngân hàng';
+        if (/vpbank/i.test(sender) || /vpbank/i.test(subject) || /vpbank/i.test(bodyText)) bank = 'VPBank';
+        else if (/techcombank/i.test(sender) || /techcombank/i.test(subject)) bank = 'Techcombank';
+        else if (/mbbank|mb bank/i.test(sender) || /mbbank|mb bank/i.test(subject)) bank = 'MB Bank';
+        else if (/vietcombank|vcb/i.test(sender) || /vietcombank/i.test(subject)) bank = 'Vietcombank';
+        else if (/timo/i.test(sender) || /timo/i.test(subject)) bank = 'Timo';
+        else if (/acb/i.test(sender) || /acb/i.test(subject)) bank = 'ACB';
+        else if (/vib/i.test(sender) || /vib/i.test(subject)) bank = 'VIB';
+        else if (/tpbank/i.test(sender) || /tpbank/i.test(subject)) bank = 'TPBank';
+        else if (/bidv/i.test(sender) || /bidv/i.test(subject)) bank = 'BIDV';
+        else if (/cake/i.test(sender) || /cake/i.test(subject)) bank = 'CAKE';
+        else if (/momo/i.test(sender) || /momo/i.test(subject)) bank = 'MoMo';
+
+        const classified = classifyBankNotification(bodyText, subject, bank);
+        if (classified.amount > 0) {
+          const id = 'email_' + new Date().getTime() + '_' + Math.floor(Math.random() * 1000);
+          const dateStr = date ? date.toISOString() : new Date().toISOString();
+          pSheet.appendRow([
+            id,
+            bank,
+            classified.type,
+            classified.amount,
+            classified.note || subject,
+            classified.category,
+            'dad',
+            dateStr,
+            'pending',
+            dateStr
+          ]);
+          addedCount++;
+        }
+      }
+      thread.addLabel(label);
+    }
+  }
+
+  return { success: true, addedCount: addedCount };
+}
+
+// Bật tự động chạy mỗi 1 phút trên Cloud Google
+function setupGmailTrigger() {
+  const triggers = ScriptApp.getProjectTriggers();
+  for (let i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'scanBankEmails') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  ScriptApp.newTrigger('scanBankEmails')
+    .timeBased()
+    .everyMinutes(1)
+    .create();
+  return "Đã thiết lập tự động quét Gmail mỗi 1 phút thành công!";
 }

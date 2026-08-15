@@ -146,9 +146,12 @@ function doGet(e) {
     if (action==='getPending'){var sheet=getSheet('PendingTransactions');if(!sheet)return responseJson({success:true,data:[]}, cb);var d=sheet.getDataRange().getValues(),p=[];for(var i=1;i<d.length;i++){if(d[i][0]&&String(d[i][8])==='pending')p.push({id:String(d[i][0]),bank:String(d[i][1]||'Ngân hàng'),type:String(d[i][2]||'expense'),amount:Number(d[i][3]||0),note:String(d[i][4]||''),category:String(d[i][5]||'other_expense'),memberId:String(d[i][6]||'family'),date:String(d[i][7]||''),status:String(d[i][8]||'pending'),createdAt:String(d[i][9]||'')});}return responseJson({success:true,data:p}, cb);}
     if (action==='approvePending'){var pId=String(e.parameter.pendingId||e.parameter.id),data=typeof e.parameter.data==='string'?JSON.parse(e.parameter.data):e.parameter.data,tSheet=getSheet('Transactions');if(tSheet&&data){tSheet.appendRow([data.id||('trans_'+new Date().getTime()),data.type||'expense',Number(data.amount||0),data.category||'other_expense',data.note||'',data.date||new Date().toISOString().slice(0,10),data.memberId||'dad',new Date().toISOString(),data.beneficiaryId||data.memberId||'family']);}var pSheet=getSheet('PendingTransactions');if(pSheet&&pId){var r=findRow(pSheet,pId);if(r>-1)pSheet.getRange(r,9).setValue('approved');}return responseJson({success:true,message:'Đã duyệt'}, cb);}
     if (action==='deletePending'){var pId=String(e.parameter.id||e.parameter.pendingId),pSheet=getSheet('PendingTransactions');if(pSheet&&pId){var r=findRow(pSheet,pId);if(r>-1)pSheet.getRange(r,9).setValue('rejected');}return responseJson({success:true,message:'Đã bỏ qua'}, cb);}
+    if (action==='scanGmail'){var res=scanBankEmails();return responseJson({success:true,addedCount:res.addedCount,message:'Đã quét Gmail thành công! Đã thêm '+res.addedCount+' giao dịch.'}, cb);}
     return responseJson({success:false,error:'Unknown action'}, cb);
   } catch(err) {return responseJson({success:false,error:err.toString()}, cb);} finally {lock.releaseLock();}
-}`;
+}
+function scanBankEmails(){var ss=SpreadsheetApp.getActiveSpreadsheet(),pSheet=ss.getSheetByName('PendingTransactions');if(!pSheet){setupSheet();pSheet=ss.getSheetByName('PendingTransactions');}var label=GmailApp.getUserLabelByName('CashFlow_Processed');if(!label){label=GmailApp.createLabel('CashFlow_Processed');}var queries=['from:(vpbank.com.vn OR techcombank.com.vn OR mbbank.com.vn OR vietcombank.com.vn OR timo.vn OR acb.com.vn OR vib.com.vn OR tpbank.com.vn OR bidv.com.vn OR cake.vn) -label:CashFlow_Processed newer_than:3d','subject:("Biến động số dư" OR "Thông báo giao dịch" OR "Transaction Alert" OR "Thông báo thay đổi số dư") -label:CashFlow_Processed newer_than:3d'],addedCount=0,processedThreadIds={};for(var q=0;q<queries.length;q++){var threads=GmailApp.search(queries[q],0,15);for(var i=0;i<threads.length;i++){var thread=threads[i];if(processedThreadIds[thread.getId()])continue;processedThreadIds[thread.getId()]=true;var messages=thread.getMessages();for(var j=0;j<messages.length;j++){var msg=messages[j],subject=msg.getSubject()||'',sender=msg.getFrom()||'',bodyText=msg.getPlainBody()||'',date=msg.getDate(),bank='Ngân hàng';if(/vpbank/i.test(sender)||/vpbank/i.test(subject)||/vpbank/i.test(bodyText))bank='VPBank';else if(/techcombank/i.test(sender)||/techcombank/i.test(subject))bank='Techcombank';else if(/mbbank|mb bank/i.test(sender)||/mbbank|mb bank/i.test(subject))bank='MB Bank';else if(/vietcombank|vcb/i.test(sender)||/vietcombank/i.test(subject))bank='Vietcombank';else if(/timo/i.test(sender)||/timo/i.test(subject))bank='Timo';else if(/acb/i.test(sender)||/acb/i.test(subject))bank='ACB';else if(/vib/i.test(sender)||/vib/i.test(subject))bank='VIB';else if(/tpbank/i.test(sender)||/tpbank/i.test(subject))bank='TPBank';else if(/bidv/i.test(sender)||/bidv/i.test(subject))bank='BIDV';else if(/cake/i.test(sender)||/cake/i.test(subject))bank='CAKE';else if(/momo/i.test(sender)||/momo/i.test(subject))bank='MoMo';var cls=classifyBankNotification(bodyText,subject,bank);if(cls.amount>0){var id='email_'+new Date().getTime()+'_'+Math.floor(Math.random()*1000),dateStr=date?date.toISOString():new Date().toISOString();pSheet.appendRow([id,bank,cls.type,cls.amount,cls.note||subject,cls.category,'dad',dateStr,'pending',dateStr]);addedCount++;}}thread.addLabel(label);}}return{success:true,addedCount:addedCount};}
+function setupGmailTrigger(){var triggers=ScriptApp.getProjectTriggers();for(var i=0;i<triggers.length;i++){if(triggers[i].getHandlerFunction()==='scanBankEmails'){ScriptApp.deleteTrigger(triggers[i]);}}ScriptApp.newTrigger('scanBankEmails').timeBased().everyMinutes(1).create();return'Đã thiết lập tự động quét Gmail mỗi 1 phút thành công!';}`;
 
 // ==================== MAIN APP ====================
 const App = {
@@ -2435,6 +2438,33 @@ const App = {
     }
   },
 
+  async handleScanGmail() {
+    if (!Storage.isOnline()) {
+      this.showToast('Vui lòng kết nối Google Sheets trước để quét Gmail! ⚠️');
+      return;
+    }
+
+    this.showToast('Đang quét hộp thư Gmail tìm email ngân hàng... ⏳');
+    try {
+      const res = await Storage._sheetApiCall('scanGmail');
+      if (res && res.success) {
+        await Storage.fetchPendingFromSheets();
+        this.checkPendingInbox();
+        if (res.addedCount > 0) {
+          this.showToast(`🎉 Đã tìm thấy ${res.addedCount} giao dịch ngân hàng mới từ Gmail!`);
+          this.openPendingInboxModal();
+        } else {
+          this.showToast('Không có email biến động số dư mới nào trong Gmail.');
+        }
+      } else {
+        this.showToast(res.error || 'Quét Gmail thất bại');
+      }
+    } catch(err) {
+      console.warn(err);
+      this.showToast('Lỗi khi quét Gmail: Hãy chạy hàm setupGmailTrigger trong Apps Script trước');
+    }
+  },
+
   _simulateLocalBankNotification(sample) {
     const fullText = (sample.title + ' ' + sample.text + ' ' + sample.bank).toLowerCase();
     let amount = 55000;
@@ -2668,6 +2698,7 @@ const App = {
     });
 
     document.getElementById('testWebhookBtn')?.addEventListener('click', () => this.handleTestWebhook());
+    document.getElementById('scanGmailBtn')?.addEventListener('click', () => this.handleScanGmail());
 
     // Transaction modal
     document.getElementById('addTransactionBtn')?.addEventListener('click', (e) => { e.stopPropagation(); this.openModal(); });

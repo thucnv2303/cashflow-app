@@ -9,7 +9,7 @@
   <title>CashFlow - Quản lý chi tiêu</title>
   <meta name="description" content="Ứng dụng quản lý tài chính gia đình thông minh, theo dõi thu chi chuyên nghiệp">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=3.1">
+  <link rel="stylesheet" href="css/style.css?v=3.2">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
@@ -640,36 +640,55 @@
               <small class="text-muted" style="font-size:0.72rem; display:block; margin-top:4px;">Dùng link này dán vào app MacroDroid (Android) hoặc Shortcuts (iOS) để tự động bắn thông báo về App.</small>
             </div>
 
-            <div style="display: flex; gap: 8px; margin-top: 10px;">
-              <button type="button" class="btn-primary" id="testWebhookBtn" style="font-size: 0.8rem; padding: 6px 12px;">🧪 Gửi thử 1 thông báo mẫu</button>
+            <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+              <button type="button" class="btn-primary" id="scanGmailBtn" style="font-size: 0.8rem; padding: 6px 12px; background: #1a73e8;">📧 Quét Email Ngân hàng từ Gmail ngay</button>
+              <button type="button" class="btn-ghost" id="testWebhookBtn" style="font-size: 0.8rem; padding: 6px 12px;">🧪 Gửi thử 1 thông báo mẫu</button>
             </div>
 
             <details class="accordion-guide" style="margin-top: 12px;">
               <summary class="accordion-header">
                 <div class="guide-summary-left">
-                  <span class="guide-icon">📱</span>
+                  <span class="guide-icon">☁️</span>
                   <div>
-                    <strong style="font-size:0.85rem;">Hướng dẫn cài đặt tự động trên điện thoại</strong>
-                    <span class="text-muted" style="font-size:0.72rem; display:block;">Cài 1 lần, tự động chạy mãi mãi</span>
+                    <strong style="font-size:0.85rem;">Cách 1: Tự động qua Gmail (Khuyên dùng - Không cần cài gì trên điện thoại)</strong>
+                    <span class="text-muted" style="font-size:0.72rem; display:block;">Chạy ngầm 24/7 trên máy chủ Google miễn phí</span>
                   </div>
                 </div>
                 <span class="accordion-arrow">▼</span>
               </summary>
               <div class="setup-guide" style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; font-size: 0.8rem;">
-                <p><strong>Cách 1: Cho điện thoại Android (Khuyên dùng MacroDroid - Miễn phí)</strong></p>
+                <p>Nếu bạn đăng ký nhận <strong>Email biến động số dư</strong> từ ngân hàng (VPBank, Techcombank, MB, VCB...):</p>
                 <ol style="padding-left: 18px; line-height: 1.6; margin-bottom: 8px;">
-                  <li>Tải ứng dụng <strong>MacroDroid</strong> trên CH Play.</li>
-                  <li>Tạo Macro mới → <strong>Trigger (Kích hoạt)</strong>: Chọn <em>Thông báo (Notification)</em> → Chọn các App Ngân hàng (Techcombank, VCB, MB...).</li>
-                  <li><strong>Action (Hành động)</strong>: Chọn <em>Mạng → HTTP Request (Yêu cầu HTTP)</em>.</li>
-                  <li>Chọn <strong>POST</strong> → Dán <em>Link Webhook</em> ở trên vào URL.</li>
-                  <li>Trong phần Body, chọn <em>Text / Plain</em>: <code>{"action":"bankNotification","text":"[not_body]","title":"[not_title]","bank":"[not_app_name]"}</code>.</li>
-                  <li>Lưu lại! Từ bây giờ, mỗi khi quẹt thẻ hay chuyển khoản, giao dịch sẽ tự động vào App trong 1 giây.</li>
+                  <li>Mở Google Sheet → Menu <strong>Tiện ích mở rộng</strong> → <strong>Apps Script</strong>.</li>
+                  <li>Copy và dán lại đoạn mã Apps Script mới nhất (bấm nút copy ở mục Google Sheets phía trên).</li>
+                  <li>Trên thanh công cụ Apps Script, chọn hàm <strong>setupGmailTrigger</strong> từ menu thả xuống → Nhấn nút <strong>▶️ Run (Chạy)</strong> → Cấp quyền đọc Gmail khi Google hỏi.</li>
+                  <li><strong>Xong!</strong> Google sẽ tự động kiểm tra hòm thư Gmail của bạn mỗi 1 phút 24/7. Cứ có email biến động là tự bóc tách đưa vào App CashFlow!</li>
                 </ol>
-                <p><strong>Cách 2: Cho iPhone (iOS Shortcuts / Phím tắt)</strong></p>
+              </div>
+            </details>
+
+            <details class="accordion-guide" style="margin-top: 10px;">
+              <summary class="accordion-header">
+                <div class="guide-summary-left">
+                  <span class="guide-icon">📱</span>
+                  <div>
+                    <strong style="font-size:0.85rem;">Cách 2: Cài đặt qua App MacroDroid (Android) hoặc Phím tắt (iPhone)</strong>
+                    <span class="text-muted" style="font-size:0.72rem; display:block;">Nhận biến động qua SMS hoặc Notification</span>
+                  </div>
+                </div>
+                <span class="accordion-arrow">▼</span>
+              </summary>
+              <div class="setup-guide" style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; font-size: 0.8rem;">
+                <p><strong>Dành cho Android (MacroDroid):</strong></p>
+                <ol style="padding-left: 18px; line-height: 1.6; margin-bottom: 8px;">
+                  <li>Tải <strong>MacroDroid</strong> trên CH Play.</li>
+                  <li>Tạo Macro mới → <strong>Trigger</strong>: Chọn <em>Thông báo (Notification)</em> từ các App Ngân hàng.</li>
+                  <li><strong>Action</strong>: Chọn <em>Mạng → HTTP Request (POST)</em> → Dán Link Webhook vào.</li>
+                </ol>
+                <p><strong>Dành cho iPhone (iOS Shortcuts / Phím tắt SMS):</strong></p>
                 <ol style="padding-left: 18px; line-height: 1.6;">
-                  <li>Mở ứng dụng <strong>Phím tắt (Shortcuts)</strong> → Tab <em>Tự động hóa (Automation)</em>.</li>
-                  <li>Tạo tự động hóa mới khi nhận tin nhắn SMS từ Ngân hàng.</li>
-                  <li>Thêm hành động <strong>Lấy nội dung từ URL (Get contents of URL)</strong> với Phương thức <strong>POST</strong> gửi nội dung tin nhắn về Webhook URL.</li>
+                  <li>Mở app <strong>Phím tắt</strong> → Tab <em>Tự động hóa</em> → Tạo mới khi nhận Tin nhắn ngân hàng.</li>
+                  <li>Thêm tác vụ <strong>Lấy nội dung từ URL (POST)</strong> gửi nội dung tin nhắn về Webhook URL.</li>
                 </ol>
               </div>
             </details>
@@ -1093,9 +1112,9 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/utils.js?v=3.1"></script>
-  <script src="js/storage.js?v=3.1"></script>
-  <script src="js/charts.js?v=3.1"></script>
-  <script src="js/app.js?v=3.1"></script>
+  <script src="js/utils.js?v=3.2"></script>
+  <script src="js/storage.js?v=3.2"></script>
+  <script src="js/charts.js?v=3.2"></script>
+  <script src="js/app.js?v=3.2"></script>
 </body>
 </html>
