@@ -9,7 +9,7 @@
   <title>CashFlow - Quản lý chi tiêu</title>
   <meta name="description" content="Ứng dụng quản lý tài chính gia đình thông minh, theo dõi thu chi chuyên nghiệp">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=2.6">
+  <link rel="stylesheet" href="css/style.css?v=2.7">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
@@ -49,6 +49,10 @@
         <li class="nav-item active" data-page="dashboard">
           <span class="nav-icon">📊</span>
           <span class="nav-label">Tổng quan</span>
+        </li>
+        <li class="nav-item" data-page="budget">
+          <span class="nav-icon">🎯</span>
+          <span class="nav-label">Ngân sách</span>
         </li>
         <li class="nav-item" data-page="transactions">
           <span class="nav-icon">📋</span>
@@ -169,27 +173,6 @@
           </div>
         </div>
 
-        <!-- Budget Planning & Daily Burn Rate Section -->
-        <div class="chart-card budget-card" id="budgetPlanningCard">
-          <div class="card-header" style="align-items: center;">
-            <div class="budget-header-title">
-              <h3 style="margin-bottom: 2px;">🎯 Phân bổ Ngân sách & Hạn mức chi ngày</h3>
-              <span class="text-muted" id="budgetRemainingDaysLabel" style="font-size: 0.75rem;">Còn lại trong tháng</span>
-            </div>
-            <button class="btn-ghost" id="openBudgetModalBtn" type="button" style="padding: 4px 10px; font-size: 0.78rem;">⚙️ Cài đặt ngân sách</button>
-          </div>
-          
-          <!-- Overall Family Budget Bar -->
-          <div class="budget-overview-banner" id="budgetOverviewBanner">
-            <!-- JS renders overall budget health, % spent, and daily safe allowance -->
-          </div>
-
-          <!-- Category Budget List -->
-          <div class="budget-categories-list" id="budgetCategoriesList">
-            <!-- JS renders progress bars & daily burn rate per category -->
-          </div>
-        </div>
-
         <!-- Charts Row -->
         <div class="charts-grid">
           <div class="chart-card">
@@ -230,6 +213,46 @@
         </div>
       </section>
 
+      <!-- PAGE: Budget Planning -->
+      <section class="page" id="page-budget">
+        <div class="page-header">
+          <div>
+            <h1>🎯 Kế hoạch Ngân sách</h1>
+            <span class="text-muted" id="budgetHeaderSubtitle" style="font-size: 0.85rem;">Phân bổ chi tiêu & hạn mức an toàn mỗi ngày</span>
+          </div>
+          <div class="header-right-controls">
+            <div class="scope-toggle" id="budgetScopeToggle">
+              <!-- JS renders dynamic family member scope buttons -->
+            </div>
+            <div class="month-selector">
+              <button class="btn-ghost" id="budgetPrevMonth">◀</button>
+              <span id="budgetCurrentMonth">Tháng 8, 2026</span>
+              <button class="btn-ghost" id="budgetNextMonth">▶</button>
+            </div>
+            <button class="btn-primary" id="openBudgetModalBtn" type="button" style="padding: 6px 14px; font-size: 0.85rem; white-space: nowrap;">⚙️ Cài đặt ngân sách</button>
+          </div>
+        </div>
+
+        <!-- Overall Family Budget Bar -->
+        <div class="budget-overview-banner" id="budgetOverviewBanner">
+          <!-- JS renders overall budget health, % spent, and daily safe allowance -->
+        </div>
+
+        <!-- Category Budget Section -->
+        <div class="chart-card" style="margin-top: 16px;">
+          <div class="card-header">
+            <div>
+              <h3>Hạn mức từng Danh mục Chi tiêu</h3>
+              <span class="text-muted" style="font-size: 0.78rem;">Bấm vào từng danh mục để xem chi tiết các khoản chi 🔍</span>
+            </div>
+            <span class="text-muted" id="budgetRemainingDaysLabel" style="font-size: 0.78rem;">Còn lại trong tháng</span>
+          </div>
+          <div class="budget-categories-list" id="budgetCategoriesList">
+            <!-- JS renders interactive category budget cards -->
+          </div>
+        </div>
+      </section>
+
       <!-- PAGE 2: Transactions -->
       <section class="page" id="page-transactions">
         <div class="page-header">
@@ -244,6 +267,14 @@
           <div class="filter-group">
             <label>Tháng</label>
             <input type="month" id="filterMonth" class="filter-input">
+          </div>
+          <div class="filter-group">
+            <label>Chi cho ai</label>
+            <select id="filterBeneficiary" class="filter-input">
+              <option value="all">Tất cả</option>
+              <option value="family">👨‍👩‍👧‍👦 Cả nhà</option>
+              <!-- JS fills members -->
+            </select>
           </div>
           <div class="filter-group">
             <label>Loại</label>
@@ -781,9 +812,9 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/utils.js?v=2.6"></script>
-  <script src="js/storage.js?v=2.6"></script>
-  <script src="js/charts.js?v=2.6"></script>
-  <script src="js/app.js?v=2.6"></script>
+  <script src="js/utils.js?v=2.7"></script>
+  <script src="js/storage.js?v=2.7"></script>
+  <script src="js/charts.js?v=2.7"></script>
+  <script src="js/app.js?v=2.7"></script>
 </body>
 </html>

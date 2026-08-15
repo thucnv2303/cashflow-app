@@ -2731,7 +2731,7 @@ html[data-theme='light'] .toast {
 .header-right-controls {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -2740,8 +2740,16 @@ html[data-theme='light'] .toast {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 2px;
-  gap: 2px;
+  padding: 3px;
+  gap: 3px;
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scope-toggle::-webkit-scrollbar {
+  display: none;
 }
 
 .scope-btn {
@@ -2755,16 +2763,29 @@ html[data-theme='light'] .toast {
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .scope-btn:hover {
   color: var(--text-primary);
+  background: var(--surface-hover);
 }
 
 .scope-btn.active {
   background: var(--primary);
   color: #fff;
   box-shadow: 0 2px 8px var(--primary-glow);
+}
+
+.avatar-img-xs {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  object-fit: cover;
+  vertical-align: middle;
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 /* 2. Clickable KPI Cards */
@@ -3065,15 +3086,29 @@ html[data-theme='light'] .toast {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  transition: transform 0.2s, border-color 0.2s;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s, border-color 0.2s;
+  user-select: none;
 }
 
 .budget-cat-item:hover {
+  transform: translateY(-2px);
   border-color: var(--primary);
+  box-shadow: 0 4px 14px rgba(231, 125, 62, 0.12);
+}
+
+.budget-cat-item:active {
+  transform: scale(0.98);
+}
+
+.budget-cat-hint {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  margin-left: 4px;
 }
 
 .budget-cat-header {
