@@ -116,11 +116,23 @@ const Storage = {
       fetchUrl += `&${key}=${encodeURIComponent(typeof params[key] === 'object' ? JSON.stringify(params[key]) : params[key])}`;
     }
     
-    // Google Apps Script redirects 302 → googleusercontent.com
-    // fetch() mặc định follow redirect nhưng đôi khi CORS chặn
+    // Thử fetch trước, nếu CORS lỗi → fallback JSONP
+    try {
+      return await this._fetchWithTimeout(fetchUrl, 15000);
+    } catch (fetchError) {
+      console.warn('Fetch failed, trying JSONP fallback:', fetchError.message);
+      try {
+        return await this._jsonpCall(fetchUrl, 15000);
+      } catch (jsonpError) {
+        // Cả 2 đều lỗi → báo chi tiết
+        throw new Error('Không thể kết nối. Kiểm tra: (1) URL đúng format .../exec, (2) Deploy → Execute as: Me, Who has access: Anyone, (3) Đã chạy setupSheet() và cấp quyền');
+      }
+    }
+  },
+
+  async _fetchWithTimeout(fetchUrl, timeoutMs) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
-    
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await fetch(fetchUrl, {
         method: 'GET',
@@ -128,29 +140,49 @@ const Storage = {
         signal: controller.signal
       });
       clearTimeout(timeout);
-      
-      // Đọc response text trước, parse JSON sau (tránh lỗi parse)
       const text = await response.text();
       try {
         return JSON.parse(text);
       } catch {
-        // Nếu response là HTML (trang lỗi), báo rõ
         if (text.includes('<!DOCTYPE') || text.includes('<html')) {
-          throw new Error('Google Apps Script trả về trang HTML thay vì JSON. Kiểm tra lại URL deploy.');
+          throw new Error('Apps Script trả về HTML thay vì JSON');
         }
-        throw new Error('Phản hồi không phải JSON hợp lệ');
+        throw new Error('Phản hồi không phải JSON');
       }
     } catch (error) {
       clearTimeout(timeout);
-      if (error.name === 'AbortError') {
-        throw new Error('Quá thời gian kết nối (20s). Kiểm tra lại URL.');
-      }
-      // Thông báo lỗi rõ ràng hơn
-      if (error.message === 'Failed to fetch') {
-        throw new Error('Không thể kết nối. Kiểm tra: (1) URL đúng, (2) Deploy quyền "Anyone", (3) Đã chạy setupSheet()');
-      }
       throw error;
     }
+  },
+
+  // JSONP fallback - bypass CORS bằng script injection
+  _jsonpCall(url, timeoutMs) {
+    return new Promise((resolve, reject) => {
+      const callbackName = '_cashflow_cb_' + Date.now();
+      const timeout = setTimeout(() => {
+        delete window[callbackName];
+        script.remove();
+        reject(new Error('JSONP timeout'));
+      }, timeoutMs);
+
+      window[callbackName] = (data) => {
+        clearTimeout(timeout);
+        delete window[callbackName];
+        script.remove();
+        resolve(data);
+      };
+
+      const script = document.createElement('script');
+      const separator = url.includes('?') ? '&' : '?';
+      script.src = `${url}${separator}callback=${callbackName}`;
+      script.onerror = () => {
+        clearTimeout(timeout);
+        delete window[callbackName];
+        script.remove();
+        reject(new Error('JSONP script load failed'));
+      };
+      document.head.appendChild(script);
+    });
   },
 
   async testConnection() {

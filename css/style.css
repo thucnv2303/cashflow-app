@@ -1913,6 +1913,142 @@ html[data-theme='light'] input[type="date"]::-webkit-calendar-picker-indicator {
   color: var(--expense);
 }
 
+/* ==================== Member Management ==================== */
+.member-management-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.member-manage-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface-hover);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.member-manage-row:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 2px 8px var(--shadow);
+}
+
+.member-manage-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.member-manage-avatar:hover {
+  border-color: var(--primary);
+}
+
+.member-manage-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.member-manage-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.member-manage-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.member-manage-name-input {
+  font-weight: 600;
+  font-size: 0.95rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: var(--text-primary);
+  width: 100%;
+  max-width: 200px;
+}
+
+.member-manage-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.member-manage-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.member-manage-actions button {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.member-manage-actions button:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+}
+
+.member-manage-actions .delete-member-btn:hover {
+  background: var(--expense-bg);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.member-manage-actions .save-member-btn {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.member-manage-actions .save-member-btn:hover {
+  opacity: 0.9;
+}
+
+.add-member-form {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface-hover);
+  border-radius: 14px;
+  border: 2px dashed var(--border);
+  margin-top: 12px;
+}
+
+.add-member-form .avatar-picker {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 /* ==================== Light Mode Surface Enhancement ==================== */
 html[data-theme='light'] .summary-card,
 html[data-theme='light'] .mood-card,

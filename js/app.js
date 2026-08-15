@@ -32,29 +32,36 @@ function getSheet(name) {
   return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
 }
 function findRow(sheet,id){var d=sheet.getDataRange().getValues();for(var i=1;i<d.length;i++){if(d[i][0]===id)return i+1;}return -1;}
-function responseJson(data){return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);}
+function responseJson(data, callback){
+  var json = JSON.stringify(data);
+  if (callback) {
+    return ContentService.createTextOutput(callback + '(' + json + ')').setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);
+}
 function doGet(e) {
   var action = e.parameter.action || 'getAll';
-  if (action==='ping') return responseJson({status:'ok',message:'Kết nối thành công!'});
+  var cb = e.parameter.callback || null;
+  if (action==='ping') return responseJson({status:'ok',message:'Kết nối thành công!'}, cb);
   var lock = LockService.getScriptLock();
   try {
     lock.waitLock(10000);
     if (action==='getAll') {
-      var sheet=getSheet('Transactions');if(!sheet)return responseJson({success:true,data:[]});
+      var sheet=getSheet('Transactions');if(!sheet)return responseJson({success:true,data:[]}, cb);
       var d=sheet.getDataRange().getValues(),r=[];
       for(var i=1;i<d.length;i++){if(d[i][0])r.push({id:d[i][0],type:d[i][1],amount:Number(d[i][2]),category:d[i][3],note:d[i][4],date:d[i][5],memberId:d[i][6],createdAt:d[i][7]});}
-      return responseJson({success:true,data:r});
+      return responseJson({success:true,data:r}, cb);
     }
-    if (action==='add'){var o=JSON.parse(e.parameter.data);getSheet('Transactions').appendRow([o.id||'',o.type||'',o.amount||0,o.category||'',o.note||'',o.date||'',o.memberId||'',o.createdAt||'']);return responseJson({success:true});}
-    if (action==='update'){var id=e.parameter.id,o=JSON.parse(e.parameter.data),s=getSheet('Transactions'),r=findRow(s,id);if(r>-1){s.getRange(r,1,1,8).setValues([[o.id||id,o.type||'',o.amount||0,o.category||'',o.note||'',o.date||'',o.memberId||'',o.createdAt||'']]);return responseJson({success:true});}throw new Error('Not found');}
-    if (action==='delete'){var s=getSheet('Transactions'),r=findRow(s,e.parameter.id);if(r>-1){s.deleteRow(r);return responseJson({success:true});}throw new Error('Not found');}
-    if (action==='sync'){var ts=JSON.parse(e.parameter.data),s=getSheet('Transactions'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(ts&&ts.length>0){var rows=ts.map(function(t){return[t.id||'',t.type||'',t.amount||0,t.category||'',t.note||'',t.date||'',t.memberId||'',t.createdAt||''];});s.getRange(2,1,rows.length,8).setValues(rows);}return responseJson({success:true});}
-    if (action==='getLoans'){var s=getSheet('Loans');if(!s)return responseJson({success:true,data:[]});var d=s.getDataRange().getValues(),r=[];for(var i=1;i<d.length;i++){if(d[i][0])r.push({id:d[i][0],name:d[i][1],emoji:d[i][2],loanType:d[i][3],principal:Number(d[i][4]),interestRate:Number(d[i][5]),termMonths:Number(d[i][6]),monthlyPayment:Number(d[i][7]),startDate:d[i][8],note:d[i][9],createdAt:d[i][10]});}return responseJson({success:true,data:r});}
-    if (action==='syncLoans'){var ls=JSON.parse(e.parameter.data),s=getSheet('Loans'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(ls&&ls.length>0){var rows=ls.map(function(l){return[l.id||'',l.name||'',l.emoji||'',l.loanType||'',l.principal||0,l.interestRate||0,l.termMonths||0,l.monthlyPayment||0,l.startDate||'',l.note||'',l.createdAt||''];});s.getRange(2,1,rows.length,11).setValues(rows);}return responseJson({success:true});}
-    if (action==='getMembers'){var s=getSheet('Members');if(!s)return responseJson({success:true,data:[]});var d=s.getDataRange().getValues(),r=[];for(var i=1;i<d.length;i++){if(d[i][0])r.push({id:d[i][0],name:d[i][1],avatar:d[i][2],color:d[i][3]});}return responseJson({success:true,data:r});}
-    if (action==='syncMembers'){var ms=JSON.parse(e.parameter.data),s=getSheet('Members'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(ms&&ms.length>0){var rows=ms.map(function(m){return[m.id||'',m.name||'',m.avatar||'',m.color||''];});s.getRange(2,1,rows.length,4).setValues(rows);}return responseJson({success:true});}
-    return responseJson({success:false,error:'Unknown action'});
-  } catch(err) {return responseJson({success:false,error:err.toString()});} finally {lock.releaseLock();}
+    if (action==='add'){var o=JSON.parse(e.parameter.data);getSheet('Transactions').appendRow([o.id||'',o.type||'',o.amount||0,o.category||'',o.note||'',o.date||'',o.memberId||'',o.createdAt||'']);return responseJson({success:true}, cb);}
+    if (action==='update'){var id=e.parameter.id,o=JSON.parse(e.parameter.data),s=getSheet('Transactions'),r=findRow(s,id);if(r>-1){s.getRange(r,1,1,8).setValues([[o.id||id,o.type||'',o.amount||0,o.category||'',o.note||'',o.date||'',o.memberId||'',o.createdAt||'']]);return responseJson({success:true}, cb);}throw new Error('Not found');}
+    if (action==='delete'){var s=getSheet('Transactions'),r=findRow(s,e.parameter.id);if(r>-1){s.deleteRow(r);return responseJson({success:true}, cb);}throw new Error('Not found');}
+    if (action==='sync'){var ts=JSON.parse(e.parameter.data),s=getSheet('Transactions'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(ts&&ts.length>0){var rows=ts.map(function(t){return[t.id||'',t.type||'',t.amount||0,t.category||'',t.note||'',t.date||'',t.memberId||'',t.createdAt||''];});s.getRange(2,1,rows.length,8).setValues(rows);}return responseJson({success:true}, cb);}
+    if (action==='getLoans'){var s=getSheet('Loans');if(!s)return responseJson({success:true,data:[]}, cb);var d=s.getDataRange().getValues(),r=[];for(var i=1;i<d.length;i++){if(d[i][0])r.push({id:d[i][0],name:d[i][1],emoji:d[i][2],loanType:d[i][3],principal:Number(d[i][4]),interestRate:Number(d[i][5]),termMonths:Number(d[i][6]),monthlyPayment:Number(d[i][7]),startDate:d[i][8],note:d[i][9],createdAt:d[i][10]});}return responseJson({success:true,data:r}, cb);}
+    if (action==='syncLoans'){var ls=JSON.parse(e.parameter.data),s=getSheet('Loans'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(ls&&ls.length>0){var rows=ls.map(function(l){return[l.id||'',l.name||'',l.emoji||'',l.loanType||'',l.principal||0,l.interestRate||0,l.termMonths||0,l.monthlyPayment||0,l.startDate||'',l.note||'',l.createdAt||''];});s.getRange(2,1,rows.length,11).setValues(rows);}return responseJson({success:true}, cb);}
+    if (action==='getMembers'){var s=getSheet('Members');if(!s)return responseJson({success:true,data:[]}, cb);var d=s.getDataRange().getValues(),r=[];for(var i=1;i<d.length;i++){if(d[i][0])r.push({id:d[i][0],name:d[i][1],avatar:d[i][2],color:d[i][3]});}return responseJson({success:true,data:r}, cb);}
+    if (action==='syncMembers'){var ms=JSON.parse(e.parameter.data),s=getSheet('Members'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(ms&&ms.length>0){var rows=ms.map(function(m){return[m.id||'',m.name||'',m.avatar||'',m.color||''];});s.getRange(2,1,rows.length,4).setValues(rows);}return responseJson({success:true}, cb);}
+    return responseJson({success:false,error:'Unknown action'}, cb);
+  } catch(err) {return responseJson({success:false,error:err.toString()}, cb);} finally {lock.releaseLock();}
 }`;
 
 // ==================== MAIN APP ====================
@@ -503,7 +510,143 @@ const App = {
     if (ac) ac.style.display = Storage.getSyncMode() === 'sheets' ? 'block' : 'none';
     if (au) au.value = Storage.getApiUrl();
     if (Storage.isOnline()) { const sa = document.getElementById('syncActions'); if(sa) sa.style.display = 'flex'; }
+    this.renderMemberManagement();
     this.renderReminderSettings();
+  },
+
+  // ==================== MEMBER MANAGEMENT ====================
+  _editingMemberId: null,
+
+  renderMemberManagement() {
+    const list = document.getElementById('memberManagementList');
+    if (!list) return;
+    const members = Storage.getMembers();
+    list.innerHTML = members.map((m, i) => {
+      const imgSrc = m.avatarImg || (AVATARS.find(a => a.id === m.avatarId) || AVATARS[0]).img;
+      const isEditing = this._editingMemberId === m.id;
+      return `
+        <div class="member-manage-row" data-id="${m.id}">
+          <div class="member-manage-avatar" data-id="${m.id}" data-action="change-avatar" title="Đổi avatar">
+            <img src="${imgSrc}" alt="${m.name}">
+          </div>
+          <div class="member-manage-info">
+            ${isEditing
+              ? `<input class="member-manage-name-input" value="${m.name}" data-id="${m.id}" autofocus>`
+              : `<span class="member-manage-name">${m.name}</span>`
+            }
+            <span><span class="member-manage-color" style="background:${m.color}"></span> ${isEditing ? 'Đang sửa...' : ''}</span>
+          </div>
+          <div class="member-manage-actions">
+            ${isEditing
+              ? `<button class="save-member-btn" data-id="${m.id}" title="Lưu">✓</button>
+                 <button data-id="${m.id}" data-action="cancel-edit" title="Hủy">✕</button>`
+              : `<button data-id="${m.id}" data-action="edit-member" title="Sửa tên">✏️</button>
+                 <button class="delete-member-btn" data-id="${m.id}" data-action="delete-member" title="Xóa">🗑️</button>`
+            }
+          </div>
+        </div>`;
+    }).join('');
+  },
+
+  handleMemberManagementClick(e) {
+    const btn = e.target.closest('button[data-action], div[data-action]');
+    if (!btn) {
+      // Check save button
+      const saveBtn = e.target.closest('.save-member-btn');
+      if (saveBtn) {
+        const id = saveBtn.dataset.id;
+        const input = document.querySelector(`.member-manage-name-input[data-id="${id}"]`);
+        if (input && input.value.trim()) {
+          Storage.updateMember(id, { name: input.value.trim() });
+          this._editingMemberId = null;
+          this.renderMemberManagement();
+          this.showToast('Đã cập nhật ✅');
+          this.renderFamilyAvatars();
+        }
+        return;
+      }
+      return;
+    }
+    const action = btn.dataset.action;
+    const id = btn.dataset.id;
+
+    if (action === 'edit-member') {
+      this._editingMemberId = id;
+      this.renderMemberManagement();
+      setTimeout(() => {
+        document.querySelector(`.member-manage-name-input[data-id="${id}"]`)?.focus();
+      }, 50);
+    } else if (action === 'cancel-edit') {
+      this._editingMemberId = null;
+      this.renderMemberManagement();
+    } else if (action === 'delete-member') {
+      const member = Storage.getMemberById(id);
+      const members = Storage.getMembers();
+      if (members.length <= 1) {
+        this.showToast('Cần ít nhất 1 thành viên', 'error');
+        return;
+      }
+      if (confirm(`Xóa thành viên "${member?.name}"? Giao dịch cũ vẫn giữ nguyên.`)) {
+        Storage.deleteMember(id);
+        this.renderMemberManagement();
+        this.renderFamilyAvatars();
+        this.showToast('Đã xóa 🗑️');
+      }
+    } else if (action === 'change-avatar') {
+      this.showMemberAvatarPicker(id, btn);
+    }
+  },
+
+  showMemberAvatarPicker(memberId, button) {
+    document.querySelectorAll('.avatar-popover').forEach(p => p.remove());
+    const popover = document.createElement('div');
+    popover.className = 'avatar-popover';
+    popover.innerHTML = AVATARS.map(a =>
+      `<button type="button" class="avatar-option" data-avatar-id="${a.id}" data-member-id="${memberId}"><img src="${a.img}" alt="${a.label}" class="avatar-img"><span>${a.label}</span></button>`
+    ).join('');
+    button.style.position = 'relative';
+    button.parentElement.style.position = 'relative';
+    button.parentElement.appendChild(popover);
+    popover.addEventListener('click', (ev) => {
+      const opt = ev.target.closest('.avatar-option');
+      if (opt) {
+        const avId = opt.dataset.avatarId;
+        const av = AVATARS.find(a => a.id === avId);
+        Storage.updateMember(memberId, { avatarId: avId, avatarImg: av.img, avatar: av.emoji });
+        popover.remove();
+        this.renderMemberManagement();
+        this.renderFamilyAvatars();
+        this.showToast('Đã đổi avatar ✅');
+      }
+    });
+    setTimeout(() => {
+      const closeHandler = (ev) => {
+        if (!popover.contains(ev.target)) { popover.remove(); document.removeEventListener('click', closeHandler); }
+      };
+      document.addEventListener('click', closeHandler);
+    }, 100);
+  },
+
+  handleAddMember() {
+    const members = Storage.getMembers();
+    if (members.length >= 6) {
+      this.showToast('Tối đa 6 thành viên', 'error');
+      return;
+    }
+    const name = prompt('Tên thành viên mới:');
+    if (!name || !name.trim()) return;
+    const avIndex = members.length % AVATARS.length;
+    const av = AVATARS[avIndex];
+    Storage.addMember({
+      name: name.trim(),
+      avatarId: av.id,
+      avatar: av.emoji,
+      avatarImg: av.img,
+      color: MEMBER_COLORS[members.length % MEMBER_COLORS.length]
+    });
+    this.renderMemberManagement();
+    this.renderFamilyAvatars();
+    this.showToast('Đã thêm thành viên ✅');
   },
 
   // ==================== NOTIFICATIONS ====================
@@ -978,6 +1121,21 @@ const App = {
         this.setupMemberRows[parseInt(e.target.dataset.index)].name = e.target.value;
       }
     });
+    // Member management
+    document.getElementById('memberManagementList')?.addEventListener('click', (e) => this.handleMemberManagementClick(e));
+    document.getElementById('memberManagementList')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target.classList.contains('member-manage-name-input')) {
+        const id = e.target.dataset.id;
+        if (e.target.value.trim()) {
+          Storage.updateMember(id, { name: e.target.value.trim() });
+          this._editingMemberId = null;
+          this.renderMemberManagement();
+          this.showToast('Đã cập nhật ✅');
+          this.renderFamilyAvatars();
+        }
+      }
+    });
+    document.getElementById('addMemberBtn')?.addEventListener('click', () => this.handleAddMember());
     // Notification settings
     document.getElementById('enableNotifBtn')?.addEventListener('click', () => this.requestNotificationPermission());
     document.getElementById('reminderMemberList')?.addEventListener('change', (e) => {
