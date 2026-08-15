@@ -9,7 +9,7 @@
   <title>CashFlow - Quản lý chi tiêu</title>
   <meta name="description" content="Ứng dụng quản lý tài chính gia đình thông minh, theo dõi thu chi chuyên nghiệp">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=3.2">
+  <link rel="stylesheet" href="css/style.css?v=3.3">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
@@ -640,6 +640,16 @@
               <small class="text-muted" style="font-size:0.72rem; display:block; margin-top:4px;">Dùng link này dán vào app MacroDroid (Android) hoặc Shortcuts (iOS) để tự động bắn thông báo về App.</small>
             </div>
 
+            <!-- Wife 1-Tap Portal Link -->
+            <div class="form-group" style="margin-top: 12px; background: rgba(231, 125, 62, 0.08); border: 1px dashed var(--primary); padding: 12px; border-radius: 10px;">
+              <label style="font-weight: 700; color: var(--primary);">🌸 Link 1-Chạm Quét Gmail gửi cho Vợ (Mẹ Dâu):</label>
+              <div style="display: flex; gap: 8px; margin-top: 6px;">
+                <input type="text" id="wifePortalUrlInput" class="filter-input" readonly style="flex: 1; font-size: 0.78rem; background: var(--surface);">
+                <button type="button" class="btn-primary" id="copyWifePortalBtn" style="font-size: 0.8rem; white-space: nowrap;">📲 Copy gửi Vợ</button>
+              </div>
+              <small class="text-muted" style="font-size:0.72rem; display:block; margin-top:4px;">Gửi link này qua Zalo/Tin nhắn cho Vợ. Vợ chỉ cần bấm vào link trên điện thoại là hòm thư Gmail của Vợ sẽ tự động quét email ngân hàng và đưa vào sổ chi tiêu chung của gia đình mà không cần cài app/phím tắt nào!</small>
+            </div>
+
             <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
               <button type="button" class="btn-primary" id="scanGmailBtn" style="font-size: 0.8rem; padding: 6px 12px; background: #1a73e8;">📧 Quét Email Ngân hàng từ Gmail ngay</button>
               <button type="button" class="btn-ghost" id="testWebhookBtn" style="font-size: 0.8rem; padding: 6px 12px;">🧪 Gửi thử 1 thông báo mẫu</button>
@@ -1112,9 +1122,9 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/utils.js?v=3.2"></script>
-  <script src="js/storage.js?v=3.2"></script>
-  <script src="js/charts.js?v=3.2"></script>
-  <script src="js/app.js?v=3.2"></script>
+  <script src="js/utils.js?v=3.3"></script>
+  <script src="js/storage.js?v=3.3"></script>
+  <script src="js/charts.js?v=3.3"></script>
+  <script src="js/app.js?v=3.3"></script>
 </body>
 </html>

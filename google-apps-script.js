@@ -129,6 +129,11 @@ function doGet(e) {
   if (action === 'ping') {
     return responseJson({ status: 'ok', message: 'Kết nối thành công!' }, cb);
   }
+
+  if (action === 'portal' || action === 'auth') {
+    const memberId = e.parameter.member || 'mom';
+    return renderMemberPortalHtml(memberId);
+  }
   
   const lock = LockService.getScriptLock();
   try {
@@ -620,7 +625,8 @@ function classifyBankNotification(rawText, title, bank) {
 }
 
 // ==================== GMAIL CLOUD AUTO-SCAN ====================
-function scanBankEmails() {
+function scanBankEmails(targetMember) {
+  const member = targetMember || 'dad';
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let pSheet = ss.getSheetByName('PendingTransactions');
   if (!pSheet) {
@@ -680,7 +686,7 @@ function scanBankEmails() {
             classified.amount,
             classified.note || subject,
             classified.category,
-            'dad',
+            member,
             dateStr,
             'pending',
             dateStr
@@ -693,6 +699,10 @@ function scanBankEmails() {
   }
 
   return { success: true, addedCount: addedCount };
+}
+
+function scanMemberBankEmails(memberId) {
+  return scanBankEmails(memberId || 'mom');
 }
 
 // Bật tự động chạy mỗi 1 phút trên Cloud Google
@@ -708,4 +718,71 @@ function setupGmailTrigger() {
     .everyMinutes(1)
     .create();
   return "Đã thiết lập tự động quét Gmail mỗi 1 phút thành công!";
+}
+
+// ==================== MEMBER AUTH & SCAN PORTAL HTML ====================
+function renderMemberPortalHtml(memberId) {
+  const label = memberId === 'mom' ? 'Mẹ Dâu 🌸' : (memberId === 'dad' ? 'Ba Dâu 👔' : 'Thành viên gia đình');
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CashFlow - Quét Email Ngân Hàng</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 16px; box-sizing: border-box; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 20px; padding: 28px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .emoji { font-size: 3rem; margin-bottom: 12px; }
+    h1 { font-size: 1.35rem; margin: 0 0 8px 0; color: #f8fafc; }
+    p { font-size: 0.88rem; color: #94a3b8; line-height: 1.5; margin: 0 0 20px 0; }
+    .btn { background: #e77d3e; color: #fff; border: none; border-radius: 12px; padding: 14px 24px; font-size: 1rem; font-weight: 700; cursor: pointer; width: 100%; transition: 0.2s; box-shadow: 0 4px 14px rgba(231, 125, 62, 0.4); }
+    .btn:hover { background: #d97706; transform: translateY(-1px); }
+    .status { margin-top: 18px; padding: 12px; border-radius: 10px; font-size: 0.85rem; display: none; }
+    .status.success { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+    .status.loading { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="emoji">🌸</div>
+    <h1>Ủy quyền & Quét Email Ngân Hàng</h1>
+    <p>Đang đồng bộ cho: <strong>${label}</strong><br>Hệ thống sẽ quét các email biến động số dư từ VPBank, Techcombank, MB, VCB... trong Gmail của bạn và đưa vào sổ chi tiêu chung của gia đình.</p>
+    
+    <button class="btn" id="scanBtn" onclick="startScan()">🚀 Quét Email Ngân Hàng Của Tôi</button>
+    <div id="statusBox" class="status"></div>
+  </div>
+
+  <script>
+    function startScan() {
+      var btn = document.getElementById('scanBtn');
+      var box = document.getElementById('statusBox');
+      btn.disabled = true;
+      btn.textContent = 'Đang quét hòm thư Gmail... ⏳';
+      box.style.display = 'block';
+      box.className = 'status loading';
+      box.textContent = 'Đang tìm kiếm các thông báo ngân hàng mới nhất...';
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          btn.textContent = '🔄 Quét lại';
+          box.className = 'status success';
+          box.innerHTML = '🎉 Đã quét xong!<br>Đã thêm ' + (res.addedCount || 0) + ' giao dịch mới vào sổ gia đình!';
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.textContent = 'Thử lại';
+          box.className = 'status loading';
+          box.style.color = '#f87171';
+          box.textContent = 'Lỗi: ' + err.toString();
+        })
+        .scanMemberBankEmails('${memberId}');
+    }
+  </script>
+</body>
+</html>`;
+
+  return HtmlService.createHtmlOutput(html)
+    .setTitle('CashFlow - Quét Email Ngân Hàng')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
