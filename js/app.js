@@ -34,6 +34,13 @@ function setupSheet() {
     budgetSheet.setFrozenRows(1);
     budgetSheet.getRange('A1:C1').setFontWeight('bold');
   }
+  let catSheet = ss.getSheetByName('CustomCategories');
+  if (!catSheet) {
+    catSheet = ss.insertSheet('CustomCategories');
+    catSheet.appendRow(['ID','Tên','Emoji','Loại','Ngày tạo']);
+    catSheet.setFrozenRows(1);
+    catSheet.getRange('A1:E1').setFontWeight('bold');
+  }
 }
 function getSheet(name) {
   return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
@@ -81,6 +88,8 @@ function doGet(e) {
     if (action==='syncMembers'){var ms=JSON.parse(e.parameter.data),s=getSheet('Members'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(ms&&ms.length>0){var rows=ms.map(function(m){return[m.id||'',m.name||'',m.avatar||'',m.color||'',m.avatarImg||'',m.avatarId||''];});s.getRange(2,1,rows.length,6).setValues(rows);}return responseJson({success:true}, cb);}
     if (action==='getBudgets'){var s=getSheet('Budgets');if(!s)return responseJson({success:true,data:{}}, cb);var d=s.getDataRange().getValues(),b={};for(var i=1;i<d.length;i++){if(d[i][0])b[String(d[i][0])]=Number(d[i][1]||0);}return responseJson({success:true,data:b}, cb);}
     if (action==='syncBudgets'){var bs=JSON.parse(e.parameter.data),s=getSheet('Budgets'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(bs&&typeof bs==='object'){var rows=Object.keys(bs).map(function(k){return[k,Number(bs[k]||0),new Date().toISOString()];});if(rows.length>0)s.getRange(2,1,rows.length,3).setValues(rows);}return responseJson({success:true,message:'Đã đồng bộ ngân sách'}, cb);}
+    if (action==='getCustomCats'){var s=getSheet('CustomCategories');if(!s)return responseJson({success:true,data:[]}, cb);var d=s.getDataRange().getValues(),r=[];for(var i=1;i<d.length;i++){if(d[i][0])r.push({id:String(d[i][0]),label:String(d[i][1]||''),emoji:String(d[i][2]||'📦'),type:String(d[i][3]||'expense'),createdAt:String(d[i][4]||'')});}return responseJson({success:true,data:r}, cb);}
+    if (action==='syncCustomCats'){var cs=JSON.parse(e.parameter.data),s=getSheet('CustomCategories'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(cs&&cs.length>0){var rows=cs.map(function(c){return[c.id||'',c.label||'',c.emoji||'📦',c.type||'expense',c.createdAt||''];});s.getRange(2,1,rows.length,5).setValues(rows);}return responseJson({success:true,message:'Đã đồng bộ danh mục tùy chỉnh'}, cb);}
     return responseJson({success:false,error:'Unknown action'}, cb);
   } catch(err) {return responseJson({success:false,error:err.toString()}, cb);} finally {lock.releaseLock();}
 }`;
@@ -269,6 +278,26 @@ const App = {
     };
   },
 
+  // ==================== UNIFIED SCOPE FILTER ====================
+  filterTransactionsByScope(transactions, scope) {
+    if (!scope || scope === 'all') return transactions;
+    if (scope === 'family') {
+      return transactions.filter(t => !t.beneficiaryId || t.beneficiaryId === 'family');
+    }
+    // Specific member ID (e.g. Ba Dâu)
+    return transactions.filter(t => {
+      if (t.type === 'income') {
+        // Income is earned by member
+        return t.memberId === scope;
+      } else {
+        // Expense belongs to member if:
+        // 1. beneficiary is this member (chi riêng cho người này)
+        // 2. OR this member is the payer (người này chi tiền)
+        return t.beneficiaryId === scope || (!t.beneficiaryId && t.memberId === scope) || (t.beneficiaryId === 'family' && t.memberId === scope) || t.memberId === scope;
+      }
+    });
+  },
+
   // ==================== BUDGET PAGE ====================
   renderBudgetPage() {
     const { year, month } = this.budgetMonth;
@@ -281,11 +310,7 @@ const App = {
     });
 
     let transactions = Storage.getByMonth(year, month);
-    if (this.budgetScope === 'family') {
-      transactions = transactions.filter(t => !t.beneficiaryId || t.beneficiaryId === 'family');
-    } else if (this.budgetScope !== 'all') {
-      transactions = transactions.filter(t => t.beneficiaryId === this.budgetScope);
-    }
+    transactions = this.filterTransactionsByScope(transactions, this.budgetScope);
 
     this.renderBudgetSummary(transactions, this.budgetMonth, this.budgetScope);
   },
@@ -364,14 +389,9 @@ const App = {
       this.renderDashboard();
     });
 
-    // Apply dashboard scope filter (all | family | memberId)
-    if (this.dashboardScope === 'family') {
-      transactions = transactions.filter(t => !t.beneficiaryId || t.beneficiaryId === 'family');
-      prevTransactions = prevTransactions.filter(t => !t.beneficiaryId || t.beneficiaryId === 'family');
-    } else if (this.dashboardScope !== 'all') {
-      transactions = transactions.filter(t => t.beneficiaryId === this.dashboardScope);
-      prevTransactions = prevTransactions.filter(t => t.beneficiaryId === this.dashboardScope);
-    }
+    // Apply unified dashboard scope filter (all | family | memberId)
+    transactions = this.filterTransactionsByScope(transactions, this.dashboardScope);
+    prevTransactions = this.filterTransactionsByScope(prevTransactions, this.dashboardScope);
 
     let income = 0, expense = 0;
     transactions.forEach(t => { if (t.type === 'income') income += t.amount; else expense += t.amount; });
@@ -480,8 +500,7 @@ const App = {
     }
 
     if (fm) { const [y,m] = fm.split('-').map(Number); txs = txs.filter(t => { const d=new Date(t.date); return d.getFullYear()===y&&(d.getMonth()+1)===m; }); }
-    if (fb === 'family') txs = txs.filter(t => !t.beneficiaryId || t.beneficiaryId === 'family');
-    else if (fb !== 'all') txs = txs.filter(t => t.beneficiaryId === fb);
+    txs = this.filterTransactionsByScope(txs, fb);
     if (ft !== 'all') txs = txs.filter(t => t.type === ft);
     if (fc !== 'all') txs = txs.filter(t => t.category === fc);
     switch(fs) {
@@ -1157,7 +1176,8 @@ const App = {
   },
   renderCategories() {
     const c = document.getElementById('categoryGrid'); if(!c) return;
-    c.innerHTML = CATEGORIES[this.selectedType].map(cat =>
+    const cats = this.selectedType === 'expense' ? getExpenseCategories() : CATEGORIES.income;
+    c.innerHTML = cats.map(cat =>
       `<button type="button" class="category-btn ${this.selectedCategory===cat.id?'active':''}" data-id="${cat.id}"><span class="cat-icon">${cat.emoji}</span><span>${cat.label}</span></button>`
     ).join('');
   },
@@ -1166,11 +1186,7 @@ const App = {
   openKPIModal(type) {
     const { year, month } = this.currentMonth;
     let transactions = Storage.getByMonth(year, month);
-    if (this.dashboardScope === 'family') {
-      transactions = transactions.filter(t => !t.beneficiaryId || t.beneficiaryId === 'family');
-    } else if (this.dashboardScope !== 'all') {
-      transactions = transactions.filter(t => t.beneficiaryId === this.dashboardScope);
-    }
+    transactions = this.filterTransactionsByScope(transactions, this.dashboardScope);
 
     const modal = document.getElementById('kpiDrilldownModal');
     const titleEl = document.getElementById('kpiDrilldownTitle');
@@ -1186,7 +1202,7 @@ const App = {
     if (this.dashboardScope === 'family') subtitle += ' · 👨‍👩‍👧‍👦 Cả nhà';
     else if (this.dashboardScope !== 'all') {
       const m = Storage.getMemberById(this.dashboardScope);
-      if (m) subtitle += ` · 👤 Chi riêng cho ${m.name}`;
+      if (m) subtitle += ` · 👤 Cho ${m.name}`;
     }
 
     if (type === 'income') {
@@ -1254,12 +1270,7 @@ const App = {
     const cat = getCategoryById(categoryId) || { emoji: '📦', label: categoryId };
     const { year, month } = this.budgetMonth;
     let transactions = Storage.getByMonth(year, month);
-
-    if (this.budgetScope === 'family') {
-      transactions = transactions.filter(t => !t.beneficiaryId || t.beneficiaryId === 'family');
-    } else if (this.budgetScope !== 'all') {
-      transactions = transactions.filter(t => t.beneficiaryId === this.budgetScope);
-    }
+    transactions = this.filterTransactionsByScope(transactions, this.budgetScope);
 
     const filtered = transactions.filter(t => t.type === 'expense' && t.category === categoryId);
     filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -1272,7 +1283,7 @@ const App = {
     if (this.budgetScope === 'family') sub += ' · 👨‍👩‍👧‍👦 Cả nhà';
     else if (this.budgetScope !== 'all') {
       const mem = Storage.getMemberById(this.budgetScope);
-      if (mem) sub += ` · 👤 Chi riêng cho ${mem.name}`;
+      if (mem) sub += ` · 👤 Cho ${mem.name}`;
     }
     if (budgetAmount > 0) sub += ` · Hạn mức: ${formatCurrency(budgetAmount)}`;
     document.getElementById('kpiDrilldownSubtitle').textContent = sub;
@@ -1322,6 +1333,8 @@ const App = {
     const { year, month } = viewedMonth || this.budgetMonth;
     const daysRemaining = getDaysRemainingInMonth(year, month);
     const budgets = Storage.getBudgets();
+    const expenseCats = getExpenseCategories();
+    const savingsGoal = Storage.getSavingsGoal();
 
     // Remaining days label
     const daysLabel = document.getElementById('budgetRemainingDaysLabel');
@@ -1337,24 +1350,31 @@ const App = {
       }
     }
 
-    // Expense breakdown by category
+    // Expense breakdown by category & Income calculation
     const catSpentMap = {};
     let totalExpense = 0;
-    CATEGORIES.expense.forEach(c => { catSpentMap[c.id] = 0; });
+    let totalIncome = 0;
+    expenseCats.forEach(c => { catSpentMap[c.id] = 0; });
     transactions.forEach(t => {
       if (t.type === 'expense') {
         catSpentMap[t.category] = (catSpentMap[t.category] || 0) + t.amount;
         totalExpense += t.amount;
+      } else if (t.type === 'income') {
+        totalIncome += t.amount;
       }
     });
 
     // Total budget calculation
     let totalBudget = 0;
-    CATEGORIES.expense.forEach(c => {
+    expenseCats.forEach(c => {
       totalBudget += (budgets[c.id] || 0);
     });
 
     const overallInfo = calcCategoryBudgetInfo(totalExpense, totalBudget, daysRemaining);
+
+    // Savings Calculation
+    const actualSavings = Math.max(0, totalIncome - totalExpense);
+    const savingsProgress = savingsGoal > 0 ? Math.round((actualSavings / savingsGoal) * 100) : 0;
 
     // Render Overview Banner
     const banner = document.getElementById('budgetOverviewBanner');
@@ -1376,7 +1396,7 @@ const App = {
       banner.innerHTML = `
         <div class="budget-banner-header">
           <div>
-            <span class="text-muted" style="font-size: 0.75rem;">Đã chi tiêu / Tổng ngân sách</span>
+            <span class="text-muted" style="font-size: 0.75rem; font-weight: 500;">Đã chi tiêu / Tổng ngân sách</span>
             <div class="budget-banner-stat">
               <span class="budget-banner-amount">${formatCurrency(overallInfo.spent)}</span>
               <span class="text-muted" style="font-size: 0.85rem;">/ ${formatCurrency(overallInfo.budget)}</span>
@@ -1384,8 +1404,8 @@ const App = {
             </div>
           </div>
           <div style="text-align: right;">
-            <span class="text-muted" style="font-size: 0.75rem;">Còn lại</span>
-            <div style="font-size: 1.1rem; font-weight: 700; color: ${isOver ? 'var(--expense)' : 'var(--income)'};">
+            <span class="text-muted" style="font-size: 0.75rem; font-weight: 500;">Còn lại</span>
+            <div style="font-size: 1.15rem; font-weight: 800; color: ${isOver ? 'var(--expense)' : 'var(--income)'};">
               ${isOver ? '-' + formatCurrency(overallInfo.overAmount) : formatCurrency(overallInfo.remaining)}
             </div>
           </div>
@@ -1398,13 +1418,29 @@ const App = {
         <div class="budget-daily-allowance-box">
           <span>${adviceText}</span>
         </div>
+
+        ${savingsGoal > 0 ? `
+          <div class="savings-goal-banner">
+            <div class="savings-goal-header">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span>🎯</span>
+                <span style="color:var(--income); font-weight:700;">Mục tiêu Tiết kiệm:</span>
+                <span>${formatCurrency(actualSavings)} / ${formatCurrency(savingsGoal)}</span>
+              </div>
+              <span class="budget-cat-percent safe">${savingsProgress}%</span>
+            </div>
+            <div class="budget-progress-track" style="height:6px;">
+              <div class="budget-progress-fill safe" style="width: ${Math.min(savingsProgress, 100)}%;"></div>
+            </div>
+          </div>
+        ` : ''}
       `;
     }
 
     // Render Categories List
     const catList = document.getElementById('budgetCategoriesList');
     if (catList) {
-      catList.innerHTML = CATEGORIES.expense.map(c => {
+      catList.innerHTML = expenseCats.map(c => {
         const spent = catSpentMap[c.id] || 0;
         const bAmount = budgets[c.id] || 0;
         const info = calcCategoryBudgetInfo(spent, bAmount, daysRemaining);
@@ -1438,8 +1474,11 @@ const App = {
             </div>
 
             <div class="budget-cat-footer">
-              <span>${formatCurrency(spent)} / ${formatCurrency(bAmount)}</span>
-              <span class="budget-daily-badge">${dailyText}</span>
+              <div class="budget-cat-amounts">
+                <span>${formatCurrency(spent)}</span>
+                <span class="budget-target">/ ${formatCurrency(bAmount)}</span>
+              </div>
+              <span class="budget-daily-badge ${info.isOver ? 'over' : ''}">${dailyText}</span>
             </div>
           </div>
         `;
@@ -1459,22 +1498,149 @@ const App = {
     const container = document.getElementById('budgetFormItems');
     if (!modal || !container) return;
 
+    // Set savings goal input
+    const savingsInput = document.getElementById('budgetSavingsGoalInput');
+    if (savingsInput) {
+      savingsInput.value = formatNumberInput(Storage.getSavingsGoal());
+      savingsInput.oninput = (e) => {
+        e.target.value = formatNumberInput(e.target.value);
+      };
+    }
+
     const budgets = Storage.getBudgets();
-    container.innerHTML = CATEGORIES.expense.map(c => {
+    const expenseCats = getExpenseCategories();
+
+    container.innerHTML = expenseCats.map(c => {
       const val = budgets[c.id] !== undefined ? budgets[c.id] : (DEFAULT_BUDGETS[c.id] || 0);
+      const isCustom = c.id.startsWith('custom_');
       return `
-        <div class="budget-form-row">
+        <div class="budget-form-row" data-cat-row="${c.id}">
           <div class="budget-form-label">
             <span style="font-size: 1.2rem;">${c.emoji}</span>
             <span>${c.label}</span>
+            ${isCustom ? `<button type="button" class="btn-delete-cat" data-delete-cat="${c.id}" title="Xóa danh mục này">🗑️</button>` : ''}
           </div>
           <input type="text" class="budget-form-input" data-cat="${c.id}" value="${formatNumberInput(val)}" inputmode="numeric" placeholder="0">
         </div>
       `;
     }).join('');
 
+    // Bind number inputs formatting & total recalculation
+    container.querySelectorAll('.budget-form-input').forEach(input => {
+      input.addEventListener('input', (e) => {
+        e.target.value = formatNumberInput(e.target.value);
+        this.updateBudgetModalTotal();
+      });
+    });
+
+    // Bind custom category deletion
+    container.querySelectorAll('[data-delete-cat]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const catId = btn.dataset.deleteCat;
+        if (confirm('Xóa danh mục này khỏi danh sách ngân sách?')) {
+          Storage.deleteCustomCategory(catId);
+          this.populateCategoryFilter();
+          this.openBudgetModal();
+        }
+      });
+    });
+
+    // Reset and setup Custom Category form
+    this.setupCustomCategoryForm();
+
     this.updateBudgetModalTotal();
     modal.classList.add('active');
+  },
+
+  setupCustomCategoryForm() {
+    const showBtn = document.getElementById('showAddCatBtn');
+    const form = document.getElementById('addCustomCatForm');
+    const cancelBtn = document.getElementById('cancelAddCatBtn');
+    const confirmBtn = document.getElementById('confirmAddCatBtn');
+    const emojiBtn = document.getElementById('newCatEmojiBtn');
+    const emojiPalette = document.getElementById('catEmojiPalette');
+    const labelInput = document.getElementById('newCatLabelInput');
+    const amountInput = document.getElementById('newCatAmountInput');
+
+    if (!showBtn || !form) return;
+
+    form.style.display = 'none';
+    showBtn.style.display = 'block';
+    if (emojiPalette) emojiPalette.style.display = 'none';
+
+    let selectedEmoji = '📈';
+    if (emojiBtn) emojiBtn.textContent = selectedEmoji;
+
+    // Render preset emojis
+    if (emojiPalette) {
+      emojiPalette.innerHTML = CUSTOM_CATEGORY_PRESET_EMOJIS.map(em => `
+        <div class="cat-emoji-item" data-emoji="${em}">${em}</div>
+      `).join('');
+
+      emojiPalette.onclick = (e) => {
+        const item = e.target.closest('.cat-emoji-item');
+        if (item) {
+          selectedEmoji = item.dataset.emoji;
+          if (emojiBtn) emojiBtn.textContent = selectedEmoji;
+          emojiPalette.style.display = 'none';
+        }
+      };
+    }
+
+    if (emojiBtn) {
+      emojiBtn.onclick = () => {
+        if (emojiPalette) {
+          emojiPalette.style.display = emojiPalette.style.display === 'none' ? 'flex' : 'none';
+        }
+      };
+    }
+
+    if (amountInput) {
+      amountInput.oninput = (e) => {
+        e.target.value = formatNumberInput(e.target.value);
+      };
+    }
+
+    showBtn.onclick = () => {
+      showBtn.style.display = 'none';
+      form.style.display = 'block';
+      if (labelInput) { labelInput.value = ''; labelInput.focus(); }
+      if (amountInput) amountInput.value = '';
+    };
+
+    if (cancelBtn) {
+      cancelBtn.onclick = () => {
+        form.style.display = 'none';
+        showBtn.style.display = 'block';
+      };
+    }
+
+    if (confirmBtn) {
+      confirmBtn.onclick = () => {
+        const label = labelInput?.value.trim();
+        if (!label) {
+          alert('Vui lòng nhập tên danh mục');
+          return;
+        }
+        const amount = parseNumberInput(amountInput?.value);
+        const newCat = Storage.addCustomCategory({
+          label,
+          emoji: selectedEmoji
+        });
+
+        // Set its budget amount
+        if (amount > 0) {
+          const budgets = Storage.getBudgets();
+          budgets[newCat.id] = amount;
+          Storage.saveBudgets(budgets);
+        }
+
+        this.populateCategoryFilter();
+        this.openBudgetModal();
+        this.showToast(`Đã thêm danh mục ${selectedEmoji} ${label} ✨`);
+      };
+    }
   },
 
   closeBudgetModal() {
@@ -1492,21 +1658,29 @@ const App = {
 
   handleBudgetSubmit(e) {
     e.preventDefault();
+    // Save savings goal
+    const savingsInput = document.getElementById('budgetSavingsGoalInput');
+    if (savingsInput) {
+      Storage.saveSavingsGoal(parseNumberInput(savingsInput.value));
+    }
+
+    // Save category budgets
     const newBudgets = {};
     document.querySelectorAll('.budget-form-input').forEach(input => {
       const catId = input.dataset.cat;
       if (catId) newBudgets[catId] = parseNumberInput(input.value);
     });
     Storage.saveBudgets(newBudgets);
+
     this.closeBudgetModal();
     this.renderCurrentPage();
-    this.showToast('Đã lưu ngân sách ✅');
+    this.showToast('Đã lưu cài đặt ngân sách & mục tiêu ✅');
   },
 
   applyPresetBudgets(type = 'default') {
     let presets = { ...DEFAULT_BUDGETS };
     if (type === '503020') {
-      // 50% Nhu cầu thiết yếu (Ăn uống 40%, Nhà cửa 20%, Hóa đơn 15%, Di chuyển 15%, Sức khỏe 10%)
+      // 50% Nhu cầu thiết yếu
       presets = {
         food: 7000000,
         house: 3500000,

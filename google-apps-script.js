@@ -48,6 +48,15 @@ function setupSheet() {
     budgetSheet.setFrozenRows(1);
     budgetSheet.getRange('A1:C1').setFontWeight('bold');
   }
+
+  // Sheet CustomCategories
+  let catSheet = ss.getSheetByName('CustomCategories');
+  if (!catSheet) {
+    catSheet = ss.insertSheet('CustomCategories');
+    catSheet.appendRow(['ID', 'Tên', 'Emoji', 'Loại', 'Ngày tạo']);
+    catSheet.setFrozenRows(1);
+    catSheet.getRange('A1:E1').setFontWeight('bold');
+  }
 }
 
 function getSheet(name) {
@@ -276,6 +285,39 @@ function doGet(e) {
         }
       }
       return responseJson({ success: true, message: 'Đã đồng bộ ngân sách' }, cb);
+    }
+
+    // ==================== CUSTOM CATEGORIES ====================
+    if (action === 'getCustomCats') {
+      const sheet = getSheet('CustomCategories');
+      if (!sheet) return responseJson({ success: true, data: [] }, cb);
+      const data = sheet.getDataRange().getValues();
+      const cats = [];
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0]) {
+          cats.push({
+            id: String(data[i][0]),
+            label: String(data[i][1] || ''),
+            emoji: String(data[i][2] || '📦'),
+            type: String(data[i][3] || 'expense'),
+            createdAt: String(data[i][4] || '')
+          });
+        }
+      }
+      return responseJson({ success: true, data: cats }, cb);
+    }
+
+    if (action === 'syncCustomCats') {
+      const cats = JSON.parse(e.parameter.data);
+      const sheet = getSheet('CustomCategories');
+      if (!sheet) return responseJson({ success: false, error: 'Sheet CustomCategories không tồn tại' }, cb);
+      const lastRow = sheet.getLastRow();
+      if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
+      if (cats && cats.length > 0) {
+        const rows = cats.map(c => [c.id || '', c.label || '', c.emoji || '📦', c.type || 'expense', c.createdAt || new Date().toISOString()]);
+        sheet.getRange(2, 1, rows.length, 5).setValues(rows);
+      }
+      return responseJson({ success: true, message: 'Đã đồng bộ danh mục tùy chỉnh' }, cb);
     }
     
     return responseJson({ success: false, error: 'Hành động không hợp lệ' }, cb);

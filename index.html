@@ -9,7 +9,7 @@
   <title>CashFlow - Quản lý chi tiêu</title>
   <meta name="description" content="Ứng dụng quản lý tài chính gia đình thông minh, theo dõi thu chi chuyên nghiệp">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=2.7">
+  <link rel="stylesheet" href="css/style.css?v=2.8">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
@@ -671,28 +671,63 @@
         <div class="modal budget-modal">
           <div class="modal-header">
             <div>
-              <h2>Cài đặt Ngân sách Tháng</h2>
-              <span class="text-muted" style="font-size: 0.78rem;">Thiết lập hạn mức chi tiêu cho từng danh mục</span>
+              <h2>Cài đặt Ngân sách & Mục tiêu</h2>
+              <span class="text-muted" style="font-size: 0.78rem;">Thiết lập hạn mức chi tiêu & mục tiêu tích lũy tháng</span>
             </div>
             <button class="btn-close" id="budgetModalClose">✕</button>
           </div>
 
-          <div class="budget-modal-presets" style="display: flex; gap: 8px; margin-bottom: 12px;">
-            <button type="button" class="btn-ghost" id="preset503020Btn" style="padding: 4px 10px; font-size: 0.75rem;">💡 Gợi ý mẫu</button>
-            <button type="button" class="btn-ghost" id="resetBudgetBtn" style="padding: 4px 10px; font-size: 0.75rem;">🔄 Mặc định</button>
+          <!-- Savings Goal Input Box -->
+          <div class="savings-goal-setting-box">
+            <div class="savings-goal-label">
+              <span>🎯 Mục tiêu Tiết kiệm tháng (₫)</span>
+              <small class="text-muted">Kế hoạch tích lũy dự kiến</small>
+            </div>
+            <input type="text" id="budgetSavingsGoalInput" class="savings-goal-input" placeholder="VD: 5.000.000" inputmode="numeric">
+          </div>
+
+          <div class="budget-modal-presets" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Hạn mức từng Danh mục:</span>
+            <div style="display: flex; gap: 6px;">
+              <button type="button" class="btn-ghost" id="preset503020Btn" style="padding: 3px 8px; font-size: 0.72rem;">💡 Gợi ý mẫu</button>
+              <button type="button" class="btn-ghost" id="resetBudgetBtn" style="padding: 3px 8px; font-size: 0.72rem;">🔄 Mặc định</button>
+            </div>
           </div>
 
           <form id="budgetForm" class="budget-form">
-            <div class="budget-form-items" id="budgetFormItems" style="max-height: 46vh; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 8px;">
-              <!-- JS renders input for each expense category -->
+            <div class="budget-form-items" id="budgetFormItems" style="max-height: 38vh; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 8px;">
+              <!-- JS renders input for each expense category (default + custom with delete button) -->
+            </div>
+
+            <!-- Add Custom Category Section -->
+            <div class="add-custom-cat-wrapper" id="addCustomCatWrapper" style="margin-top: 8px;">
+              <button type="button" class="btn-ghost btn-add-cat" id="showAddCatBtn" style="width: 100%; border: 1px dashed var(--border); border-radius: 8px; padding: 6px; font-size: 0.8rem;">
+                <span>➕</span> Thêm danh mục ngân sách mới
+              </button>
+              
+              <div class="add-custom-cat-form" id="addCustomCatForm" style="display: none; background: var(--surface); border: 1px solid var(--primary); border-radius: 10px; padding: 10px; margin-top: 6px;">
+                <div class="cat-form-row" style="display: flex; gap: 6px; align-items: center; margin-bottom: 6px;">
+                  <button type="button" class="emoji-picker-btn" id="newCatEmojiBtn" style="font-size: 1.2rem; width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-hover); cursor: pointer;">📈</button>
+                  <input type="text" id="newCatLabelInput" placeholder="Tên mục (VD: Đầu tư, Du lịch...)" class="cat-label-input" maxlength="25" style="flex: 1; padding: 6px 10px; font-size: 0.82rem; border-radius: 8px; border: 1px solid var(--border);">
+                  <input type="text" id="newCatAmountInput" placeholder="Ngân sách (₫)" class="cat-amount-input" inputmode="numeric" style="width: 110px; padding: 6px 8px; font-size: 0.82rem; border-radius: 8px; border: 1px solid var(--border); text-align: right;">
+                </div>
+                <!-- Emoji selection grid -->
+                <div class="cat-emoji-palette" id="catEmojiPalette" style="display: none; gap: 6px; flex-wrap: wrap; padding: 6px 0; border-top: 1px solid var(--border); margin-top: 6px;">
+                  <!-- JS renders preset emojis -->
+                </div>
+                <div class="cat-form-actions" style="display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px;">
+                  <button type="button" class="btn-ghost" id="cancelAddCatBtn" style="padding: 4px 10px; font-size: 0.75rem;">Hủy</button>
+                  <button type="button" class="btn-primary" id="confirmAddCatBtn" style="padding: 4px 12px; font-size: 0.75rem;">Thêm mục này</button>
+                </div>
+              </div>
             </div>
 
             <div class="budget-form-total" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-top: 10px;">
-              <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">Tổng ngân sách:</span>
-              <strong id="budgetModalTotal" style="font-size: 1.1rem; color: var(--primary);">0 ₫</strong>
+              <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">Tổng ngân sách tháng:</span>
+              <strong id="budgetModalTotal" style="font-size: 1.15rem; color: var(--primary);">0 ₫</strong>
             </div>
 
-            <button type="submit" class="btn-primary btn-submit" style="margin-top: 10px; width: 100%;">💾 Lưu ngân sách</button>
+            <button type="submit" class="btn-primary btn-submit" style="margin-top: 10px; width: 100%;">💾 Lưu cài đặt ngân sách</button>
           </form>
         </div>
       </div>
@@ -812,9 +847,9 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/utils.js?v=2.7"></script>
-  <script src="js/storage.js?v=2.7"></script>
-  <script src="js/charts.js?v=2.7"></script>
-  <script src="js/app.js?v=2.7"></script>
+  <script src="js/utils.js?v=2.8"></script>
+  <script src="js/storage.js?v=2.8"></script>
+  <script src="js/charts.js?v=2.8"></script>
+  <script src="js/app.js?v=2.8"></script>
 </body>
 </html>

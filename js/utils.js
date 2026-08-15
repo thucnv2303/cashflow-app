@@ -210,18 +210,30 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
 }
 
-// Get category by id
-function getCategoryById(id) {
-  for (const type in CATEGORIES) {
-    const category = CATEGORIES[type].find(c => c.id === id);
-    if (category) return category;
-  }
-  return null;
+// Preset Emojis for Custom Categories
+const CUSTOM_CATEGORY_PRESET_EMOJIS = ['📈', '🏖️', '🐶', '🎁', '🏦', '🚗', '💍', '🎮', '👗', '🍼', '💻', '🏋️', '☕', '👶', '🍕', '🏠', '✈️', '🎨', '🛡️', '📦'];
+
+// Get all expense categories including custom
+function getExpenseCategories() {
+  const custom = (typeof Storage !== 'undefined' && Storage.getCustomCategories) ? Storage.getCustomCategories() : [];
+  return [
+    ...CATEGORIES.expense,
+    ...custom.filter(c => !CATEGORIES.expense.some(def => def.id === c.id))
+  ];
 }
 
-// Get all categories flat
+// Get all categories flat (expense + income + custom)
 function getAllCategories() {
-  return [...CATEGORIES.expense, ...CATEGORIES.income];
+  return [...getExpenseCategories(), ...CATEGORIES.income];
+}
+
+// Get category by id (with fallback)
+function getCategoryById(id) {
+  if (!id) return null;
+  const all = getAllCategories();
+  const found = all.find(c => c.id === id);
+  if (found) return found;
+  return { id, emoji: '📦', label: id };
 }
 
 // Get month range (start date, end date) for filtering

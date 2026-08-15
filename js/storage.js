@@ -9,6 +9,8 @@ const SETUP_DONE_KEY = 'cashflow_setup_done';
 const LOANS_KEY = 'cashflow_loans';
 const REMINDER_KEY = 'cashflow_reminders';
 const BUDGETS_KEY = 'cashflow_budgets';
+const CUSTOM_CATS_KEY = 'cashflow_custom_categories';
+const SAVINGS_GOAL_KEY = 'cashflow_savings_goal';
 
 const Storage = {
   // ==================== CONFIG ====================
@@ -130,6 +132,62 @@ const Storage = {
     return this._sheetApiCall('syncBudgets', { data: budgets });
   },
 
+  // ==================== SAVINGS GOAL ====================
+  getSavingsGoal() {
+    const raw = localStorage.getItem(SAVINGS_GOAL_KEY);
+    return raw ? Number(raw) : 5000000;
+  },
+  saveSavingsGoal(amount) {
+    localStorage.setItem(SAVINGS_GOAL_KEY, String(amount || 0));
+  },
+
+  // ==================== CUSTOM CATEGORIES CRUD ====================
+  getCustomCategories() {
+    const raw = localStorage.getItem(CUSTOM_CATS_KEY);
+    if (!raw) return [];
+    try {
+      return JSON.parse(raw);
+    } catch(e) {
+      return [];
+    }
+  },
+  saveCustomCategories(cats) {
+    localStorage.setItem(CUSTOM_CATS_KEY, JSON.stringify(cats));
+    if (this.isOnline()) {
+      this.syncCustomCatsToSheets().catch(e => console.warn(e));
+    }
+  },
+  addCustomCategory(cat) {
+    const cats = this.getCustomCategories();
+    const id = 'custom_' + generateId();
+    const newCat = { id, label: cat.label, emoji: cat.emoji || '📦', type: 'expense', createdAt: new Date().toISOString() };
+    cats.push(newCat);
+    this.saveCustomCategories(cats);
+    return newCat;
+  },
+  deleteCustomCategory(id) {
+    let cats = this.getCustomCategories();
+    cats = cats.filter(c => c.id !== id);
+    this.saveCustomCategories(cats);
+    // Also delete its budget
+    const budgets = this.getBudgets();
+    delete budgets[id];
+    this.saveBudgets(budgets);
+  },
+  getAllExpenseCategories() {
+    return getExpenseCategories();
+  },
+  async fetchCustomCatsFromSheets() {
+    const res = await this._sheetApiCall('getCustomCats');
+    if (res && res.success) return res.data;
+    throw new Error(res.error || 'Không thể lấy danh mục tùy chỉnh từ Sheets');
+  },
+  async syncCustomCatsToSheets() {
+    if (!this.isOnline()) return false;
+    const cats = this.getCustomCategories();
+    return this._sheetApiCall('syncCustomCats', { data: cats });
+  },
+
   // ==================== TRANSACTIONS LOCAL STORAGE ====================
   getLocal() {
     const data = localStorage.getItem(STORAGE_KEY);
@@ -154,7 +212,7 @@ const Storage = {
     }
 
     try {
-      if (['syncMembers', 'syncLoans', 'syncBudgets', 'sync', 'add', 'update'].includes(action)) {
+      if (['syncMembers', 'syncLoans', 'syncBudgets', 'syncCustomCats', 'sync', 'add', 'update'].includes(action)) {
         try {
           const controller = new AbortController();
           const to = setTimeout(() => controller.abort(), 12000);
@@ -505,6 +563,13 @@ const Storage = {
           localStorage.setItem(BUDGETS_KEY, JSON.stringify({ ...current, ...budgetsData }));
         }
       } catch (e) { console.warn('Sync budgets failed:', e); }
+
+      try {
+        const catsData = await this.fetchCustomCatsFromSheets();
+        if (Array.isArray(catsData)) {
+          this.saveCustomCategories(catsData);
+        }
+      } catch (e) { console.warn('Sync custom cats failed:', e); }
 
       return true;
     } catch (e) {
