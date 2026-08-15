@@ -31,6 +31,10 @@
           <span class="nav-icon">📈</span>
           <span class="nav-label">Phân tích</span>
         </li>
+        <li class="nav-item" data-page="settings">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-label">Cài đặt</span>
+        </li>
       </ul>
       <div class="sidebar-footer">
         <button class="theme-toggle" id="themeToggle" title="Đổi giao diện">
@@ -55,6 +59,12 @@
         </button>
       </div>
       
+      <!-- Sync Status -->
+      <div class="sync-status" id="syncStatus" style="display:none;">
+        <span class="sync-dot"></span>
+        <span class="sync-text">Đang đồng bộ...</span>
+      </div>
+
       <!-- PAGE 1: Dashboard -->
       <section class="page active" id="page-dashboard">
         <div class="page-header">
@@ -275,6 +285,122 @@
           </div>
         </div>
       </section>
+
+      <!-- PAGE 4: Settings -->
+      <section class="page" id="page-settings">
+        <div class="page-header">
+          <h1>Cài đặt</h1>
+        </div>
+
+        <!-- Sync Mode -->
+        <div class="settings-section">
+          <div class="chart-card">
+            <h3>📡 Đồng bộ dữ liệu</h3>
+            <p class="settings-desc">Kết nối Google Sheets để đồng bộ dữ liệu giữa nhiều thiết bị. Vợ chồng, gia đình có thể cùng quản lý chi tiêu chung.</p>
+            
+            <!-- Sync Toggle -->
+            <div class="sync-toggle-group">
+              <label class="sync-toggle-label">
+                <span>Chế độ đồng bộ Google Sheets</span>
+                <div class="toggle-switch">
+                  <input type="checkbox" id="syncToggle">
+                  <span class="toggle-slider"></span>
+                </div>
+              </label>
+            </div>
+
+            <!-- API URL Input (shown when sync enabled) -->
+            <div class="api-config" id="apiConfig" style="display:none;">
+              <div class="form-group">
+                <label for="apiUrl">URL Google Apps Script</label>
+                <div class="api-input-group">
+                  <input type="url" id="apiUrl" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+                  <button class="btn-primary" id="testConnectionBtn" type="button">Kiểm tra</button>
+                </div>
+              </div>
+              
+              <!-- Connection Status -->
+              <div class="connection-status" id="connectionStatus" style="display:none;">
+                <span class="status-icon" id="statusIcon">⏳</span>
+                <span class="status-text" id="statusText">Đang kiểm tra...</span>
+              </div>
+
+              <!-- Sync Actions -->
+              <div class="sync-actions" id="syncActions" style="display:none;">
+                <button class="btn-primary" id="syncPullBtn" type="button">📥 Tải dữ liệu từ Sheet</button>
+                <button class="btn-ghost" id="syncPushBtn" type="button">📤 Đẩy dữ liệu lên Sheet</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Setup Guide -->
+        <div class="settings-section">
+          <div class="chart-card">
+            <h3>📖 Hướng dẫn cài đặt</h3>
+            <div class="setup-guide">
+              <div class="guide-step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                  <strong>Tạo Google Sheet mới</strong>
+                  <p>Mở <a href="https://sheets.new" target="_blank" rel="noopener">sheets.new</a> → đặt tên "CashFlow"</p>
+                </div>
+              </div>
+              <div class="guide-step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                  <strong>Mở Apps Script</strong>
+                  <p>Trong Google Sheet → Menu "Tiện ích mở rộng" → "Apps Script"</p>
+                </div>
+              </div>
+              <div class="guide-step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                  <strong>Dán code</strong>
+                  <p>Xóa nội dung cũ → dán code bên dưới → nhấn 💾 Lưu</p>
+                  <button class="btn-ghost" id="copyScriptBtn" type="button">📋 Copy code Apps Script</button>
+                </div>
+              </div>
+              <div class="guide-step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                  <strong>Chạy setupSheet</strong>
+                  <p>Trong Apps Script → chọn hàm "setupSheet" từ dropdown → nhấn ▶️ Run → cấp quyền khi được hỏi</p>
+                </div>
+              </div>
+              <div class="guide-step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                  <strong>Deploy</strong>
+                  <p>Nhấn "Triển khai" (Deploy) → "Triển khai mới" (New deployment) → Loại: "Ứng dụng web" (Web app) → Quyền: "Bất kỳ ai" (Anyone) → nhấn "Triển khai" → copy URL</p>
+                </div>
+              </div>
+              <div class="guide-step">
+                <div class="step-number">6</div>
+                <div class="step-content">
+                  <strong>Dán URL</strong>
+                  <p>Dán URL vừa copy vào ô phía trên → nhấn "Kiểm tra" → Xong! 🎉</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Management -->
+        <div class="settings-section">
+          <div class="chart-card">
+            <h3>🗃️ Quản lý dữ liệu</h3>
+            <div class="data-actions">
+              <button class="btn-ghost" id="exportJsonBtn" type="button">📤 Xuất dữ liệu (JSON)</button>
+              <label class="btn-ghost import-label">
+                📥 Nhập dữ liệu (JSON)
+                <input type="file" id="importJsonInput" accept=".json" style="display:none;">
+              </label>
+              <button class="btn-ghost btn-danger" id="clearDataBtn" type="button">🗑️ Xóa toàn bộ dữ liệu</button>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <!-- FAB (Floating Action Button) -->
@@ -332,6 +458,9 @@
 
     <!-- Toast -->
     <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Hidden Apps Script code for copy -->
+    <textarea id="appsScriptCode" style="display:none;"></textarea>
   </div>
 
   <!-- Scripts -->
