@@ -1,0 +1,17 @@
+{
+  "name": "CashFlow - Quản lý chi tiêu",
+  "short_name": "CashFlow",
+  "description": "Quản lý chi tiêu gia đình thông minh",
+  "start_url": "/cashflow-app/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#e77d3e",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
