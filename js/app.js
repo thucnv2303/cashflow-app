@@ -2849,6 +2849,25 @@ const App = {
       document.querySelectorAll('.quick-cat-chip').forEach(x => x.classList.remove('active'));
       c.classList.add('active');
     }));
+    document.getElementById('quickNote')?.addEventListener('input', (e) => {
+      const txt = (e.target.value || '').toLowerCase();
+      const map = {
+        food: ['ăn','cơm','phở','bún','cafe','cà phê','coffee','trà','sữa','bánh','kem','nhậu','bia','nước','lẩu','pizza','gà','bò','heo','thịt','rau','trái cây','hải sản','chè','milk','tea','highland','starbuck'],
+        shopping: ['mua','sắm','shopee','lazada','tiki','sendo','quần','áo','giày','dép','túi','mỹ phẩm','son','kem','đồ dùng','siêu thị','coopmart','winmart','bach hoa','bách hoá'],
+        transport: ['grab','be','xăng','xe','gojek','taxi','uber','bus','parking','đỗ xe','vé','gửi xe','đi lại','di chuyển','toll'],
+        bills: ['điện','nước','internet','wifi','gas','truyền hình','thuê nhà','phí','bảo hiểm','thuế','phí dịch vụ','cước','viettel','vnpt','fpt'],
+        health: ['thuốc','bệnh viện','khám','bs','bác sĩ','y tế','nha','răng','mắt','vitamin','bổ sung','clinic','spa'],
+        education: ['học','sách','khóa','trường','lớp','gia sư','course','udemy','skillshare','tiếng anh','đào tạo'],
+        entertainment: ['phim','game','nhạc','karaoke','du lịch','netflix','spotify','youtube','vé xem','chơi','billiard','bowling']
+      };
+      for (const [cat, keywords] of Object.entries(map)) {
+        if (keywords.some(k => txt.includes(k))) {
+          document.querySelectorAll('.quick-cat-chip').forEach(x => x.classList.remove('active'));
+          document.querySelector(`.quick-cat-chip[data-qcat="${cat}"]`)?.classList.add('active');
+          return;
+        }
+      }
+    });
     document.getElementById('quickEntrySubmit')?.addEventListener('click', () => this.submitQuickEntry());
 
     // Transaction modal
