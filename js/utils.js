@@ -110,6 +110,63 @@ const LOAN_TYPES = [
   { id: 'other_loan', emoji: '📄', label: 'Khoản vay khác' },
 ];
 
+// Default Category Budgets (VND per month)
+const DEFAULT_BUDGETS = {
+  food: 6000000,
+  shopping: 2000000,
+  transport: 1000000,
+  bills: 2500000,
+  house: 3000000,
+  health: 1000000,
+  entertainment: 1500000,
+  education: 1500000,
+  other_expense: 1000000
+};
+
+// Calculate remaining days in viewed month
+function getDaysRemainingInMonth(year, month) {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const currentDay = now.getDate();
+  const daysInViewedMonth = new Date(year, month, 0).getDate();
+
+  if (year < currentYear || (year === currentYear && month < currentMonth)) {
+    return 0; // Tháng đã qua
+  }
+  if (year > currentYear || (year === currentYear && month > currentMonth)) {
+    return daysInViewedMonth; // Tháng tương lai
+  }
+  // Tháng hiện tại
+  return Math.max(1, daysInViewedMonth - currentDay + 1);
+}
+
+// Calculate budget health, percentage, remaining, and daily burn rate allowance
+function calcCategoryBudgetInfo(spent, budget, daysRemaining) {
+  const safeBudget = budget > 0 ? budget : 0;
+  const percent = safeBudget > 0 ? Math.round((spent / safeBudget) * 100) : 0;
+  const remaining = Math.max(0, safeBudget - spent);
+  const isOver = spent > safeBudget && safeBudget > 0;
+  const overAmount = isOver ? spent - safeBudget : 0;
+  const dailyAllowance = (daysRemaining > 0 && remaining > 0) ? Math.floor(remaining / daysRemaining) : 0;
+
+  let status = 'safe'; // green (< 75%)
+  if (percent >= 100 || isOver) status = 'over'; // red (>= 100%)
+  else if (percent >= 75) status = 'warning'; // yellow (75% - 99%)
+
+  return {
+    spent,
+    budget: safeBudget,
+    percent,
+    remaining,
+    isOver,
+    overAmount,
+    dailyAllowance,
+    daysRemaining,
+    status
+  };
+}
+
 // Format number as VND currency
 function formatCurrency(amount) {
   return new Intl.NumberFormat('vi-VN', {

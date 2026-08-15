@@ -39,6 +39,15 @@ function setupSheet() {
     memberSheet.setFrozenRows(1);
     memberSheet.getRange('A1:F1').setFontWeight('bold');
   }
+
+  // Sheet Budgets
+  let budgetSheet = ss.getSheetByName('Budgets');
+  if (!budgetSheet) {
+    budgetSheet = ss.insertSheet('Budgets');
+    budgetSheet.appendRow(['CategoryID', 'Số tiền', 'Cập nhật']);
+    budgetSheet.setFrozenRows(1);
+    budgetSheet.getRange('A1:C1').setFontWeight('bold');
+  }
 }
 
 function getSheet(name) {
@@ -238,6 +247,35 @@ function doGet(e) {
         sheet.getRange(2, 1, rows.length, 6).setValues(rows);
       }
       return responseJson({ success: true, message: 'Đã đồng bộ thành viên' }, cb);
+    }
+    
+    // ==================== BUDGETS ====================
+    if (action === 'getBudgets') {
+      const sheet = getSheet('Budgets');
+      if (!sheet) return responseJson({ success: true, data: {} }, cb);
+      const data = sheet.getDataRange().getValues();
+      const budgets = {};
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0]) {
+          budgets[String(data[i][0])] = Number(data[i][1] || 0);
+        }
+      }
+      return responseJson({ success: true, data: budgets }, cb);
+    }
+
+    if (action === 'syncBudgets') {
+      const budgets = JSON.parse(e.parameter.data);
+      const sheet = getSheet('Budgets');
+      if (!sheet) return responseJson({ success: false, error: 'Sheet Budgets không tồn tại' }, cb);
+      const lastRow = sheet.getLastRow();
+      if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
+      if (budgets && typeof budgets === 'object') {
+        const rows = Object.keys(budgets).map(k => [k, Number(budgets[k] || 0), new Date().toISOString()]);
+        if (rows.length > 0) {
+          sheet.getRange(2, 1, rows.length, 3).setValues(rows);
+        }
+      }
+      return responseJson({ success: true, message: 'Đã đồng bộ ngân sách' }, cb);
     }
     
     return responseJson({ success: false, error: 'Hành động không hợp lệ' }, cb);

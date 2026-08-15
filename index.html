@@ -9,7 +9,7 @@
   <title>CashFlow - Quản lý chi tiêu</title>
   <meta name="description" content="Ứng dụng quản lý tài chính gia đình thông minh, theo dõi thu chi chuyên nghiệp">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=2.5">
+  <link rel="stylesheet" href="css/style.css?v=2.6">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
@@ -166,6 +166,27 @@
               <span class="card-value" id="savingsRate">0%</span>
               <span class="card-change" id="savingsGoal">Mục tiêu: 20%</span>
             </div>
+          </div>
+        </div>
+
+        <!-- Budget Planning & Daily Burn Rate Section -->
+        <div class="chart-card budget-card" id="budgetPlanningCard">
+          <div class="card-header" style="align-items: center;">
+            <div class="budget-header-title">
+              <h3 style="margin-bottom: 2px;">🎯 Phân bổ Ngân sách & Hạn mức chi ngày</h3>
+              <span class="text-muted" id="budgetRemainingDaysLabel" style="font-size: 0.75rem;">Còn lại trong tháng</span>
+            </div>
+            <button class="btn-ghost" id="openBudgetModalBtn" type="button" style="padding: 4px 10px; font-size: 0.78rem;">⚙️ Cài đặt ngân sách</button>
+          </div>
+          
+          <!-- Overall Family Budget Bar -->
+          <div class="budget-overview-banner" id="budgetOverviewBanner">
+            <!-- JS renders overall budget health, % spent, and daily safe allowance -->
+          </div>
+
+          <!-- Category Budget List -->
+          <div class="budget-categories-list" id="budgetCategoriesList">
+            <!-- JS renders progress bars & daily burn rate per category -->
           </div>
         </div>
 
@@ -614,6 +635,37 @@
       </div>
     </div>
 
+      <!-- Budget Settings Modal -->
+      <div class="modal-overlay" id="budgetModal">
+        <div class="modal budget-modal">
+          <div class="modal-header">
+            <div>
+              <h2>Cài đặt Ngân sách Tháng</h2>
+              <span class="text-muted" style="font-size: 0.78rem;">Thiết lập hạn mức chi tiêu cho từng danh mục</span>
+            </div>
+            <button class="btn-close" id="budgetModalClose">✕</button>
+          </div>
+
+          <div class="budget-modal-presets" style="display: flex; gap: 8px; margin-bottom: 12px;">
+            <button type="button" class="btn-ghost" id="preset503020Btn" style="padding: 4px 10px; font-size: 0.75rem;">💡 Gợi ý mẫu</button>
+            <button type="button" class="btn-ghost" id="resetBudgetBtn" style="padding: 4px 10px; font-size: 0.75rem;">🔄 Mặc định</button>
+          </div>
+
+          <form id="budgetForm" class="budget-form">
+            <div class="budget-form-items" id="budgetFormItems" style="max-height: 46vh; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 8px;">
+              <!-- JS renders input for each expense category -->
+            </div>
+
+            <div class="budget-form-total" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-top: 10px;">
+              <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">Tổng ngân sách:</span>
+              <strong id="budgetModalTotal" style="font-size: 1.1rem; color: var(--primary);">0 ₫</strong>
+            </div>
+
+            <button type="submit" class="btn-primary btn-submit" style="margin-top: 10px; width: 100%;">💾 Lưu ngân sách</button>
+          </form>
+        </div>
+      </div>
+
     <!-- KPI Drilldown Modal -->
     <div class="modal-overlay" id="kpiDrilldownModal">
       <div class="modal kpi-drilldown-modal">
@@ -656,7 +708,7 @@
           <div class="form-row">
             <div class="form-group">
               <label for="loanPrincipal">Số tiền vay (₫)</label>
-              <input type="number" id="loanPrincipal" placeholder="0" min="0" inputmode="numeric" required>
+              <input type="text" id="loanPrincipal" placeholder="0" inputmode="numeric" required>
             </div>
             <div class="form-group">
               <label for="loanRate">Lãi suất (%/năm)</label>
@@ -729,9 +781,9 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/utils.js?v=2.5"></script>
-  <script src="js/storage.js?v=2.5"></script>
-  <script src="js/charts.js?v=2.5"></script>
-  <script src="js/app.js?v=2.5"></script>
+  <script src="js/utils.js?v=2.6"></script>
+  <script src="js/storage.js?v=2.6"></script>
+  <script src="js/charts.js?v=2.6"></script>
+  <script src="js/app.js?v=2.6"></script>
 </body>
 </html>

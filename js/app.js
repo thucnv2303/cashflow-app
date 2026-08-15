@@ -27,6 +27,13 @@ function setupSheet() {
     memberSheet.setFrozenRows(1);
     memberSheet.getRange('A1:F1').setFontWeight('bold');
   }
+  let budgetSheet = ss.getSheetByName('Budgets');
+  if (!budgetSheet) {
+    budgetSheet = ss.insertSheet('Budgets');
+    budgetSheet.appendRow(['CategoryID','Số tiền','Cập nhật']);
+    budgetSheet.setFrozenRows(1);
+    budgetSheet.getRange('A1:C1').setFontWeight('bold');
+  }
 }
 function getSheet(name) {
   return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
@@ -72,6 +79,8 @@ function doGet(e) {
     if (action==='syncLoans'){var ls=JSON.parse(e.parameter.data),s=getSheet('Loans'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(ls&&ls.length>0){var rows=ls.map(function(l){return[l.id||'',l.name||'',l.emoji||'',l.loanType||'',l.principal||0,l.interestRate||0,l.termMonths||0,l.monthlyPayment||0,l.startDate||'',l.note||'',l.createdAt||''];});s.getRange(2,1,rows.length,11).setValues(rows);}return responseJson({success:true}, cb);}
     if (action==='getMembers'){var s=getSheet('Members');if(!s)return responseJson({success:true,data:[]}, cb);var d=s.getDataRange().getValues(),r=[];for(var i=1;i<d.length;i++){if(d[i][0])r.push({id:String(d[i][0]),name:String(d[i][1]||''),avatar:String(d[i][2]||'👤'),color:String(d[i][3]||'#e77d3e'),avatarImg:String(d[i][4]||''),avatarId:String(d[i][5]||'')});}return responseJson({success:true,data:r}, cb);}
     if (action==='syncMembers'){var ms=JSON.parse(e.parameter.data),s=getSheet('Members'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(ms&&ms.length>0){var rows=ms.map(function(m){return[m.id||'',m.name||'',m.avatar||'',m.color||'',m.avatarImg||'',m.avatarId||''];});s.getRange(2,1,rows.length,6).setValues(rows);}return responseJson({success:true}, cb);}
+    if (action==='getBudgets'){var s=getSheet('Budgets');if(!s)return responseJson({success:true,data:{}}, cb);var d=s.getDataRange().getValues(),b={};for(var i=1;i<d.length;i++){if(d[i][0])b[String(d[i][0])]=Number(d[i][1]||0);}return responseJson({success:true,data:b}, cb);}
+    if (action==='syncBudgets'){var bs=JSON.parse(e.parameter.data),s=getSheet('Budgets'),lr=s.getLastRow();if(lr>1)s.getRange(2,1,lr-1,s.getLastColumn()).clearContent();if(bs&&typeof bs==='object'){var rows=Object.keys(bs).map(function(k){return[k,Number(bs[k]||0),new Date().toISOString()];});if(rows.length>0)s.getRange(2,1,rows.length,3).setValues(rows);}return responseJson({success:true,message:'Đã đồng bộ ngân sách'}, cb);}
     return responseJson({success:false,error:'Unknown action'}, cb);
   } catch(err) {return responseJson({success:false,error:err.toString()}, cb);} finally {lock.releaseLock();}
 }`;
@@ -363,6 +372,7 @@ const App = {
     Charts.renderMonthlyChart('monthlyChart', monthsData);
     Charts.renderTrendChart('trendChart', monthsData);
     this.renderRecentTransactions(transactions);
+    this.renderBudgetSummary(transactions);
   },
 
   renderFamilyAvatars() {
@@ -1169,6 +1179,209 @@ const App = {
     document.getElementById('kpiDrilldownModal')?.classList.remove('active');
   },
 
+  // ==================== BUDGET PLANNING & DAILY BURN RATE ====================
+  renderBudgetSummary(transactions) {
+    const { year, month } = this.currentMonth;
+    const daysRemaining = getDaysRemainingInMonth(year, month);
+    const budgets = Storage.getBudgets();
+
+    // Remaining days label
+    const daysLabel = document.getElementById('budgetRemainingDaysLabel');
+    if (daysLabel) {
+      if (daysRemaining === 0) {
+        daysLabel.textContent = `Tháng ${month}/${year} đã kết thúc`;
+      } else {
+        const today = new Date();
+        const isCurrentMonth = today.getFullYear() === year && (today.getMonth() + 1) === month;
+        daysLabel.textContent = isCurrentMonth 
+          ? `Hôm nay ${today.getDate()}/${month} · Còn ${daysRemaining} ngày trong tháng`
+          : `Còn ${daysRemaining} ngày trong tháng`;
+      }
+    }
+
+    // Expense breakdown by category
+    const catSpentMap = {};
+    let totalExpense = 0;
+    CATEGORIES.expense.forEach(c => { catSpentMap[c.id] = 0; });
+    transactions.forEach(t => {
+      if (t.type === 'expense') {
+        catSpentMap[t.category] = (catSpentMap[t.category] || 0) + t.amount;
+        totalExpense += t.amount;
+      }
+    });
+
+    // Total budget calculation
+    let totalBudget = 0;
+    CATEGORIES.expense.forEach(c => {
+      totalBudget += (budgets[c.id] || 0);
+    });
+
+    const overallInfo = calcCategoryBudgetInfo(totalExpense, totalBudget, daysRemaining);
+
+    // Render Overview Banner
+    const banner = document.getElementById('budgetOverviewBanner');
+    if (banner) {
+      const isOver = overallInfo.isOver;
+      const percentStr = overallInfo.budget > 0 ? `${overallInfo.percent}%` : 'Chưa đặt';
+      
+      let adviceText = '';
+      if (daysRemaining === 0) {
+        adviceText = isOver ? `Đã chi vượt ngân sách ${formatCurrency(overallInfo.overAmount)} ⚠️` : `Đã tiết kiệm được ${formatCurrency(overallInfo.remaining)} 🎉`;
+      } else if (isOver) {
+        adviceText = `Đã chi vượt ngân sách tổng <strong>${formatCurrency(overallInfo.overAmount)}</strong>! Hãy thắt chặt chi tiêu trong ${daysRemaining} ngày tới ⚠️`;
+      } else if (overallInfo.dailyAllowance > 0) {
+        adviceText = `Hạn mức chi tiêu an toàn của gia đình: <strong>${formatCurrency(overallInfo.dailyAllowance)}/ngày</strong> trong ${daysRemaining} ngày còn lại 💡`;
+      } else {
+        adviceText = `Đã sử dụng hết ngân sách tháng! Cần hạn chế phát sinh chi tiêu mới 🛑`;
+      }
+
+      banner.innerHTML = `
+        <div class="budget-banner-header">
+          <div>
+            <span class="text-muted" style="font-size: 0.75rem;">Đã chi tiêu / Tổng ngân sách</span>
+            <div class="budget-banner-stat">
+              <span class="budget-banner-amount">${formatCurrency(overallInfo.spent)}</span>
+              <span class="text-muted" style="font-size: 0.85rem;">/ ${formatCurrency(overallInfo.budget)}</span>
+              <span class="budget-cat-percent ${overallInfo.status}">${percentStr}</span>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <span class="text-muted" style="font-size: 0.75rem;">Còn lại</span>
+            <div style="font-size: 1.1rem; font-weight: 700; color: ${isOver ? 'var(--expense)' : 'var(--income)'};">
+              ${isOver ? '-' + formatCurrency(overallInfo.overAmount) : formatCurrency(overallInfo.remaining)}
+            </div>
+          </div>
+        </div>
+
+        <div class="budget-progress-track">
+          <div class="budget-progress-fill ${overallInfo.status}" style="width: ${Math.min(overallInfo.percent, 100)}%;"></div>
+        </div>
+
+        <div class="budget-daily-allowance-box">
+          <span>${adviceText}</span>
+        </div>
+      `;
+    }
+
+    // Render Categories List
+    const catList = document.getElementById('budgetCategoriesList');
+    if (catList) {
+      catList.innerHTML = CATEGORIES.expense.map(c => {
+        const spent = catSpentMap[c.id] || 0;
+        const bAmount = budgets[c.id] || 0;
+        const info = calcCategoryBudgetInfo(spent, bAmount, daysRemaining);
+        
+        let dailyText = '';
+        if (daysRemaining === 0) {
+          dailyText = info.isOver ? `Vượt ${formatCurrency(info.overAmount)}` : `Dư ${formatCurrency(info.remaining)}`;
+        } else if (info.isOver) {
+          dailyText = `⚠️ Vượt ${formatCurrency(info.overAmount)}`;
+        } else if (info.dailyAllowance > 0) {
+          dailyText = `Tối đa: <strong>${formatCurrency(info.dailyAllowance)}/ngày</strong>`;
+        } else {
+          dailyText = `Đã hết ngân sách`;
+        }
+
+        return `
+          <div class="budget-cat-item">
+            <div class="budget-cat-header">
+              <div class="budget-cat-info">
+                <span>${c.emoji}</span>
+                <span>${c.label}</span>
+              </div>
+              <span class="budget-cat-percent ${info.status}">
+                ${bAmount > 0 ? info.percent + '%' : 'Chưa đặt'}
+              </span>
+            </div>
+
+            <div class="budget-progress-track">
+              <div class="budget-progress-fill ${info.status}" style="width: ${Math.min(info.percent, 100)}%;"></div>
+            </div>
+
+            <div class="budget-cat-footer">
+              <span>${formatCurrency(spent)} / ${formatCurrency(bAmount)}</span>
+              <span class="budget-daily-badge">${dailyText}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  },
+
+  openBudgetModal() {
+    const modal = document.getElementById('budgetModal');
+    const container = document.getElementById('budgetFormItems');
+    if (!modal || !container) return;
+
+    const budgets = Storage.getBudgets();
+    container.innerHTML = CATEGORIES.expense.map(c => {
+      const val = budgets[c.id] !== undefined ? budgets[c.id] : (DEFAULT_BUDGETS[c.id] || 0);
+      return `
+        <div class="budget-form-row">
+          <div class="budget-form-label">
+            <span style="font-size: 1.2rem;">${c.emoji}</span>
+            <span>${c.label}</span>
+          </div>
+          <input type="text" class="budget-form-input" data-cat="${c.id}" value="${formatNumberInput(val)}" inputmode="numeric" placeholder="0">
+        </div>
+      `;
+    }).join('');
+
+    this.updateBudgetModalTotal();
+    modal.classList.add('active');
+  },
+
+  closeBudgetModal() {
+    document.getElementById('budgetModal')?.classList.remove('active');
+  },
+
+  updateBudgetModalTotal() {
+    let total = 0;
+    document.querySelectorAll('.budget-form-input').forEach(input => {
+      total += parseNumberInput(input.value);
+    });
+    const totalEl = document.getElementById('budgetModalTotal');
+    if (totalEl) totalEl.textContent = formatCurrency(total);
+  },
+
+  handleBudgetSubmit(e) {
+    e.preventDefault();
+    const newBudgets = {};
+    document.querySelectorAll('.budget-form-input').forEach(input => {
+      const catId = input.dataset.cat;
+      if (catId) newBudgets[catId] = parseNumberInput(input.value);
+    });
+    Storage.saveBudgets(newBudgets);
+    this.closeBudgetModal();
+    this.renderDashboard();
+    this.showToast('Đã lưu ngân sách ✅');
+  },
+
+  applyPresetBudgets(type = 'default') {
+    let presets = { ...DEFAULT_BUDGETS };
+    if (type === '503020') {
+      // 50% Nhu cầu thiết yếu (Ăn uống 40%, Nhà cửa 20%, Hóa đơn 15%, Di chuyển 15%, Sức khỏe 10%)
+      presets = {
+        food: 7000000,
+        house: 3500000,
+        bills: 2500000,
+        transport: 1500000,
+        health: 1000000,
+        shopping: 2000000,
+        entertainment: 1500000,
+        education: 1500000,
+        other_expense: 1000000
+      };
+    }
+    document.querySelectorAll('.budget-form-input').forEach(input => {
+      const catId = input.dataset.cat;
+      if (catId && presets[catId] !== undefined) {
+        input.value = formatNumberInput(presets[catId]);
+      }
+    });
+    this.updateBudgetModalTotal();
+  },
+
   // ==================== LOAN MODAL ====================
   openLoanModal(editId = null) {
     this.editingLoanId = editId;
@@ -1448,6 +1661,22 @@ const App = {
     document.getElementById('avatarPresetsGrid')?.addEventListener('click', (e) => this.handlePresetSelect(e));
     document.getElementById('confirmAvatarBtn')?.addEventListener('click', () => this.confirmAvatarSelection());
     
+    // Budget Modal
+    document.getElementById('openBudgetModalBtn')?.addEventListener('click', () => this.openBudgetModal());
+    document.getElementById('budgetModalClose')?.addEventListener('click', () => this.closeBudgetModal());
+    document.getElementById('budgetModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'budgetModal') this.closeBudgetModal();
+    });
+    document.getElementById('budgetForm')?.addEventListener('submit', (e) => this.handleBudgetSubmit(e));
+    document.getElementById('preset503020Btn')?.addEventListener('click', () => this.applyPresetBudgets('503020'));
+    document.getElementById('resetBudgetBtn')?.addEventListener('click', () => this.applyPresetBudgets('default'));
+    document.getElementById('budgetFormItems')?.addEventListener('input', (e) => {
+      if (e.target.classList.contains('budget-form-input')) {
+        e.target.value = formatNumberInput(e.target.value);
+        this.updateBudgetModalTotal();
+      }
+    });
+
     // Escape key
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -1455,6 +1684,7 @@ const App = {
         this.closeLoanModal();
         this.closeAvatarModal();
         this.closeKPIModal();
+        this.closeBudgetModal();
       }
     });
   }

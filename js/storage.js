@@ -8,6 +8,7 @@ const FAMILY_NAME_KEY = 'cashflow_family_name';
 const SETUP_DONE_KEY = 'cashflow_setup_done';
 const LOANS_KEY = 'cashflow_loans';
 const REMINDER_KEY = 'cashflow_reminders';
+const BUDGETS_KEY = 'cashflow_budgets';
 
 const Storage = {
   // ==================== CONFIG ====================
@@ -98,6 +99,37 @@ const Storage = {
     }
   },
 
+  // ==================== BUDGETS CRUD ====================
+  getBudgets() {
+    const raw = localStorage.getItem(BUDGETS_KEY);
+    if (!raw) return { ...DEFAULT_BUDGETS };
+    try {
+      return { ...DEFAULT_BUDGETS, ...JSON.parse(raw) };
+    } catch(e) {
+      return { ...DEFAULT_BUDGETS };
+    }
+  },
+  saveBudgets(budgets) {
+    localStorage.setItem(BUDGETS_KEY, JSON.stringify(budgets));
+    if (this.isOnline()) {
+      this.syncBudgetsToSheets().catch(e => console.warn(e));
+    }
+  },
+  getCategoryBudget(catId) {
+    const budgets = this.getBudgets();
+    return budgets[catId] !== undefined ? budgets[catId] : (DEFAULT_BUDGETS[catId] || 0);
+  },
+  async fetchBudgetsFromSheets() {
+    const res = await this._sheetApiCall('getBudgets');
+    if (res && res.success) return res.data;
+    throw new Error(res.error || 'Không thể lấy ngân sách từ Sheets');
+  },
+  async syncBudgetsToSheets() {
+    if (!this.isOnline()) return false;
+    const budgets = this.getBudgets();
+    return this._sheetApiCall('syncBudgets', { data: budgets });
+  },
+
   // ==================== TRANSACTIONS LOCAL STORAGE ====================
   getLocal() {
     const data = localStorage.getItem(STORAGE_KEY);
@@ -122,7 +154,7 @@ const Storage = {
     }
 
     try {
-      if (['syncMembers', 'syncLoans', 'sync', 'add', 'update'].includes(action)) {
+      if (['syncMembers', 'syncLoans', 'syncBudgets', 'sync', 'add', 'update'].includes(action)) {
         try {
           const controller = new AbortController();
           const to = setTimeout(() => controller.abort(), 12000);
@@ -465,6 +497,14 @@ const Storage = {
         const loansData = await this.fetchLoansFromSheets();
         if (Array.isArray(loansData)) this.saveLoans(loansData);
       } catch (e) { console.warn('Sync loans failed:', e); }
+
+      try {
+        const budgetsData = await this.fetchBudgetsFromSheets();
+        if (budgetsData && typeof budgetsData === 'object') {
+          const current = this.getBudgets();
+          localStorage.setItem(BUDGETS_KEY, JSON.stringify({ ...current, ...budgetsData }));
+        }
+      } catch (e) { console.warn('Sync budgets failed:', e); }
 
       return true;
     } catch (e) {
