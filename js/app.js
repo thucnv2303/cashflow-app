@@ -38,6 +38,8 @@ const App = {
       }
     }
     this.renderCurrentPage();
+    // Auto-fetch pending transactions from Google Sheet on startup
+    this.fetchAndShowPending();
     // Init notifications
     if ('Notification' in window && Notification.permission === 'granted') {
       this.registerServiceWorker();
@@ -513,7 +515,7 @@ const App = {
 
   // ==================== DASHBOARD ====================
   renderDashboard() {
-    this.checkPendingInbox();
+    this.fetchAndShowPending();
     const { year, month } = this.currentMonth;
     let transactions = Storage.getByMonth(year, month);
     const prev = navigateMonth(year, month, -1);
@@ -2135,7 +2137,17 @@ const App = {
     document.getElementById('savingsHistoryModal')?.classList.remove('active');
   },
 
+
   // ==================== BANK WEBHOOK & PENDING TRANSACTIONS ====================
+  async fetchAndShowPending() {
+    try {
+      await Storage.fetchPendingFromSheets();
+    } catch(e) {
+      console.warn('fetchPendingFromSheets error:', e);
+    }
+    this.checkPendingInbox();
+  },
+
   checkPendingInbox() {
     const pending = Storage.getPendingTransactions();
     const banner = document.getElementById('pendingInboxBanner');
