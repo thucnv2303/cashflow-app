@@ -675,8 +675,25 @@ function classifyBankNotification(rawText, title, bank) {
     }
   }
 
-  // 4. Clean note
-  let cleanNote = rawText.replace(/\r?\n|\r/g, ' ').replace(/\s+/g, ' ').slice(0, 120);
+  // 4. Clean note - Extract specific merchant / ND field if present
+  let cleanNote = '';
+  const ndMatch = rawText.match(/(?:ND|Noi dung|Nội dung|GD tại|tại|Ref|Desc)[\:\s]+([^.]+?)(?:\s*(?:vao luc|vào lúc|ngay|ngày|luc|lúc|Han muc|Hạn mức|SD|Số dư|\.|$))/i);
+  if (ndMatch && ndMatch[1]) {
+    cleanNote = ndMatch[1].trim();
+  } else {
+    cleanNote = rawText
+      .replace(/(?:Số tiền|Số tiền GD|So tien|Giá trị GD|Số tiền giao dịch|Số dư thay đổi|PS|GD)[\:\s]*[\+\-]?\s*[\d\.\,]{3,15}\s*(?:vnd|vnđ|đ|d\b)/gi, '')
+      .replace(/(\d+(?:[\.,]\d+)?)\s*(?:k|nghìn|nghin|ng|cành|canh)\b/gi, '')
+      .replace(/(\d+(?:[\.,]\d+)?)\s*(?:tr|triệu|trieu|m)\b/gi, '')
+      .replace(/\b\d{4,12}\b/g, '')
+      .replace(/\r?\n|\r/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  if (!cleanNote || cleanNote.length < 2) {
+    cleanNote = rawText.slice(0, 100);
+  }
 
   return {
     amount: amount,
