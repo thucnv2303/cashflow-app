@@ -1072,5 +1072,25 @@
   <script src="js/storage.js?v=3.18"></script>
   <script src="js/charts.js?v=3.18"></script>
   <script src="js/app.js?v=3.18"></script>
+  <script>
+  // Independent click handler for pending inbox banner (v3.19 fix)
+  document.addEventListener('click', function(evt) {
+    var el = evt.target;
+    while (el && el !== document) {
+      if (el.id === 'pendingInboxBanner' || el.id === 'openPendingInboxBtn') {
+        evt.preventDefault();
+        var modal = document.getElementById('pendingInboxModal');
+        if (modal) {
+          if (typeof App !== 'undefined' && typeof App.renderPendingInbox === 'function') {
+            App.renderPendingInbox();
+          }
+          modal.classList.add('active');
+        }
+        return;
+      }
+      el = el.parentElement;
+    }
+  }, true);
+  </script>
 </body>
 </html>
