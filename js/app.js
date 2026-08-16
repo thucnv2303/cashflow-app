@@ -2643,7 +2643,20 @@ const App = {
     document.getElementById('savingsHistoryClose')?.addEventListener('click', () => this.closeSavingsHistoryModal());
     document.getElementById('savingsHistoryModal')?.addEventListener('click', (e) => { if (e.target.id === 'savingsHistoryModal') this.closeSavingsHistoryModal(); });
 
-    // Pending bank transactions inbox - handled via <a href="#pending-inbox"> + hashchange
+    // Pending bank transactions inbox
+    document.getElementById('pendingInboxBanner')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      history.replaceState(null, '', '#pending-inbox');
+      this.openPendingInboxModal();
+    });
+    window.addEventListener('hashchange', () => {
+      if (location.hash === '#pending-inbox') {
+        this.openPendingInboxModal();
+      }
+    });
+    if (location.hash === '#pending-inbox') {
+      this.openPendingInboxModal();
+    }
     document.getElementById('pendingInboxClose')?.addEventListener('click', () => this.closePendingInboxModal());
     document.getElementById('pendingInboxModal')?.addEventListener('click', (e) => { if (e.target.id === 'pendingInboxModal') this.closePendingInboxModal(); });
     

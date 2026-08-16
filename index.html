@@ -1071,21 +1071,8 @@
   <script src="js/utils.js?v=3.20"></script>
   <script src="js/storage.js?v=3.20"></script>
   <script src="js/charts.js?v=3.20"></script>
-  <script src="js/app.js?v=3.20"></script>
-  <script>
-  // Open pending inbox modal via hash navigation (v3.20)
-  window.addEventListener('hashchange', function() {
-    if (location.hash === '#pending-inbox') {
-      var modal = document.getElementById('pendingInboxModal');
-      if (modal) {
-        if (typeof App !== 'undefined' && typeof App.renderPendingInbox === 'function') {
-          App.renderPendingInbox();
-        }
-        modal.classList.add('active');
-      }
-      history.replaceState(null, '', location.pathname);
-    }
-  });
-  </script>
+  <script src="js/app.js?v=3.21"></script>
+
+
 </body>
 </html>
