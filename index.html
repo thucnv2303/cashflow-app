@@ -144,7 +144,7 @@
         </div>
 
         <!-- Bank Webhook Pending Inbox Alert Banner -->
-        <div class="pending-inbox-banner" id="pendingInboxBanner" style="display: none; cursor: pointer;">
+        <a href="#pending-inbox" class="pending-inbox-banner" id="pendingInboxBanner" style="display: none; cursor: pointer; text-decoration: none; color: inherit;">
           <div class="pending-banner-content">
             <span class="pending-pulse-dot"></span>
             <span class="pending-banner-icon">🔔</span>
@@ -153,10 +153,10 @@
               <span class="text-muted" style="font-size: 0.76rem;">Chờ bạn phân bổ vào sổ chi tiêu</span>
             </div>
           </div>
-          <button class="btn-pending-action" id="openPendingInboxBtn">
+          <span class="btn-pending-action">
             <span>👉</span> Phân bổ ngay
-          </button>
-        </div>
+          </span>
+        </a>
 
         <!-- Quick Bank Entry Button -->
         <div class="quick-bank-entry" id="quickBankEntry" style="margin-bottom: 12px;">
@@ -1073,24 +1073,19 @@
   <script src="js/charts.js?v=3.18"></script>
   <script src="js/app.js?v=3.18"></script>
   <script>
-  // Independent click handler for pending inbox banner (v3.19 fix)
-  document.addEventListener('click', function(evt) {
-    var el = evt.target;
-    while (el && el !== document) {
-      if (el.id === 'pendingInboxBanner' || el.id === 'openPendingInboxBtn') {
-        evt.preventDefault();
-        var modal = document.getElementById('pendingInboxModal');
-        if (modal) {
-          if (typeof App !== 'undefined' && typeof App.renderPendingInbox === 'function') {
-            App.renderPendingInbox();
-          }
-          modal.classList.add('active');
+  // Open pending inbox modal via hash navigation (v3.20)
+  window.addEventListener('hashchange', function() {
+    if (location.hash === '#pending-inbox') {
+      var modal = document.getElementById('pendingInboxModal');
+      if (modal) {
+        if (typeof App !== 'undefined' && typeof App.renderPendingInbox === 'function') {
+          App.renderPendingInbox();
         }
-        return;
+        modal.classList.add('active');
       }
-      el = el.parentElement;
+      history.replaceState(null, '', location.pathname);
     }
-  }, true);
+  });
   </script>
 </body>
 </html>
