@@ -2179,7 +2179,7 @@ const App = {
     if (!container) return;
     const pending = Storage.getPendingTransactions();
     const expenseCats = getExpenseCategories();
-    const incomeCats = getIncomeCategories();
+    const incomeCats = CATEGORIES.income;
     const members = Storage.getMembers();
 
     if (pending.length === 0) {
