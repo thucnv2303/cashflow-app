@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icon-512.png">
   <link rel="icon" href="icon-512.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=3.17">
+  <link rel="stylesheet" href="css/style.css?v=3.18">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -144,7 +144,7 @@
         </div>
 
         <!-- Bank Webhook Pending Inbox Alert Banner -->
-        <div class="pending-inbox-banner" id="pendingInboxBanner" style="display: none; cursor: pointer;" onclick="try{App.openPendingInboxModal()}catch(e){alert('Lỗi: '+e.message)}">
+        <div class="pending-inbox-banner" id="pendingInboxBanner" style="display: none; cursor: pointer;">
           <div class="pending-banner-content">
             <span class="pending-pulse-dot"></span>
             <span class="pending-banner-icon">🔔</span>
@@ -153,7 +153,7 @@
               <span class="text-muted" style="font-size: 0.76rem;">Chờ bạn phân bổ vào sổ chi tiêu</span>
             </div>
           </div>
-          <button class="btn-pending-action" id="openPendingInboxBtn" onclick="event.stopPropagation();try{App.openPendingInboxModal()}catch(e){alert('Lỗi nút: '+e.message)}">
+          <button class="btn-pending-action" id="openPendingInboxBtn">
             <span>👉</span> Phân bổ ngay
           </button>
         </div>
@@ -1068,9 +1068,9 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/utils.js?v=3.17"></script>
-  <script src="js/storage.js?v=3.17"></script>
-  <script src="js/charts.js?v=3.17"></script>
-  <script src="js/app.js?v=3.17"></script>
+  <script src="js/utils.js?v=3.18"></script>
+  <script src="js/storage.js?v=3.18"></script>
+  <script src="js/charts.js?v=3.18"></script>
+  <script src="js/app.js?v=3.18"></script>
 </body>
 </html>

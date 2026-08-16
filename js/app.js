@@ -2643,8 +2643,16 @@ const App = {
     document.getElementById('savingsHistoryClose')?.addEventListener('click', () => this.closeSavingsHistoryModal());
     document.getElementById('savingsHistoryModal')?.addEventListener('click', (e) => { if (e.target.id === 'savingsHistoryModal') this.closeSavingsHistoryModal(); });
 
-    // Pending bank transactions inbox
-    document.getElementById('openPendingInboxBtn')?.addEventListener('click', () => this.openPendingInboxModal());
+    // Pending bank transactions inbox - use event delegation for reliable click handling
+    document.body.addEventListener('click', (e) => {
+      const banner = e.target.closest('#pendingInboxBanner');
+      const btn = e.target.closest('#openPendingInboxBtn');
+      if (banner || btn) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.openPendingInboxModal();
+      }
+    });
     document.getElementById('pendingInboxClose')?.addEventListener('click', () => this.closePendingInboxModal());
     document.getElementById('pendingInboxModal')?.addEventListener('click', (e) => { if (e.target.id === 'pendingInboxModal') this.closePendingInboxModal(); });
     
