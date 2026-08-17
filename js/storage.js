@@ -14,6 +14,7 @@ const SAVINGS_GOAL_KEY = 'cashflow_savings_goal';
 const SAVINGS_GOALS_KEY = 'cashflow_savings_goals';
 const SAVINGS_LOGS_KEY = 'cashflow_savings_logs';
 const PENDING_KEY = 'cashflow_pending_transactions';
+const DISMISSED_PENDING_KEY = 'cashflow_dismissed_pending_ids';
 const WEBHOOK_SECRET_KEY = 'cashflow_webhook_secret';
 
 const DEFAULT_SAVINGS_GOALS = [
@@ -351,6 +352,19 @@ const Storage = {
   savePendingTransactions(list) {
     localStorage.setItem(PENDING_KEY, JSON.stringify(list));
   },
+  getDismissedPendingIds() {
+    try {
+      const ids = JSON.parse(localStorage.getItem(DISMISSED_PENDING_KEY) || '[]');
+      return Array.isArray(ids) ? ids : [];
+    } catch(e) {
+      return [];
+    }
+  },
+  markPendingDismissed(pendingId) {
+    const ids = [String(pendingId), ...this.getDismissedPendingIds().map(String)];
+    const uniqueIds = [...new Set(ids)].slice(0, 500);
+    localStorage.setItem(DISMISSED_PENDING_KEY, JSON.stringify(uniqueIds));
+  },
   getWebhookSecret() {
     return localStorage.getItem(WEBHOOK_SECRET_KEY) || 'FAMILY_SECRET_2026';
   },
@@ -362,8 +376,10 @@ const Storage = {
     try {
       const res = await this._sheetApiCall('getPending');
       if (res && res.success && Array.isArray(res.data)) {
-        this.savePendingTransactions(res.data);
-        return res.data;
+        const dismissedIds = new Set(this.getDismissedPendingIds().map(String));
+        const visiblePending = res.data.filter(item => !dismissedIds.has(String(item.id)));
+        this.savePendingTransactions(visiblePending);
+        return visiblePending;
       }
     } catch(e) {
       console.warn('Fetch pending failed:', e);
@@ -380,12 +396,21 @@ const Storage = {
     }
   },
   async deletePendingTransaction(pendingId) {
+    this.markPendingDismissed(pendingId);
     let pending = this.getPendingTransactions();
-    pending = pending.filter(p => p.id !== pendingId);
+    pending = pending.filter(p => String(p.id) !== String(pendingId));
     this.savePendingTransactions(pending);
     if (this.isOnline()) {
-      this._sheetApiCall('deletePending', { pendingId }).catch(e => console.warn(e));
+      try {
+        const result = await this._sheetApiCall('deletePending', { pendingId });
+        if (!result?.success) throw new Error(result?.error || 'Sheet không xác nhận loại bỏ');
+        return { success: true, synced: true };
+      } catch(e) {
+        console.warn('Dismiss pending sync failed:', e);
+        return { success: true, synced: false };
+      }
     }
+    return { success: true, synced: false };
   },
   addLocalPending(pendingItem) {
     const list = this.getPendingTransactions();

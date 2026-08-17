@@ -2520,7 +2520,7 @@ const App = {
           </div>
 
           <div class="pending-card-actions">
-            <button type="button" class="btn-dismiss-pending" data-id="${p.id}">🗑️ Bỏ qua</button>
+            <button type="button" class="btn-dismiss-pending" data-id="${p.id}">🚫 Không ghi sổ</button>
             <button type="button" class="btn-approve-pending" data-id="${p.id}">✅ Phân bổ & Lưu</button>
           </div>
         </div>
@@ -2588,10 +2588,18 @@ const App = {
     });
 
     container.querySelectorAll('.btn-dismiss-pending').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const id = btn.dataset.id;
-        Storage.deletePendingTransaction(id);
-        this.showToast('Đã bỏ qua giao dịch');
+        if (!confirm('Khoản này sẽ không được ghi vào sổ và sẽ không hiện lại. Tiếp tục?')) return;
+        btn.disabled = true;
+        btn.textContent = 'Đang loại bỏ...';
+        const result = await Storage.deletePendingTransaction(id);
+        this.showToast(
+          result.synced
+            ? 'Đã loại khỏi sổ và đồng bộ lên Sheet ✅'
+            : 'Đã loại khỏi sổ trên thiết bị này ✅',
+          result.synced ? 'success' : 'warning'
+        );
         this.renderPendingInbox();
         this.renderCurrentPage();
       });
