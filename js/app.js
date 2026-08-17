@@ -281,8 +281,8 @@ const App = {
           id: generateId(),
           name: row.name.trim(),
           avatarId: row.avatarId,
-          avatar: av.emoji,
-          avatarImg: av.img,
+          avatar: row.avatar || av.emoji,
+          avatarImg: row.avatarImg || av.img,
           color: MEMBER_COLORS[i % MEMBER_COLORS.length]
         });
       }
@@ -993,6 +993,13 @@ const App = {
     if ([...memberSelect.options].some(option => option.value === previousValue)) {
       memberSelect.value = previousValue;
     }
+    const selectedMember = members.find(member => member.id === memberSelect.value);
+    const status = document.getElementById('iosConfigStatus');
+    if (status) {
+      status.textContent = selectedMember
+        ? `✅ Đã cập nhật theo ${selectedMember.name} · ID: ${selectedMember.id}`
+        : '✅ Đã cập nhật cho giao dịch chung của gia đình';
+    }
     this.updateIosShortcutPreview();
   },
 
@@ -1432,9 +1439,33 @@ const App = {
     if(se) { se.style.display='flex'; se.className='connection-status loading'; } if(si) si.textContent='⏳'; if(st) st.textContent='Đang kiểm tra...';
     const r = await Storage.testConnection();
     if (r.success) {
-      if(se) se.className='connection-status success'; if(si) si.textContent='✅'; if(st) st.textContent=r.message;
+      Storage.setSyncMode('sheets');
+      if(st) st.textContent='Đã kết nối. Đang đồng bộ thành viên...';
+      let memberSyncWarning = '';
+      try {
+        await Storage.reconcileMembersWithSheets();
+      } catch (error) {
+        console.warn('Initial member sync failed:', error);
+        memberSyncWarning = error.message || 'Không thể đồng bộ thành viên';
+      }
+
+      this.renderMemberManagement();
+      this.renderFamilyAvatars();
+      this.renderIosShortcutSetup();
+      const bankSettings = document.getElementById('bankAutomationSettings');
+      if (bankSettings) bankSettings.open = true;
+
+      if(se) se.className = memberSyncWarning ? 'connection-status warning' : 'connection-status success';
+      if(si) si.textContent = memberSyncWarning ? '⚠️' : '✅';
+      if(st) st.textContent = memberSyncWarning
+        ? `Đã kết nối, nhưng chưa đồng bộ thành viên: ${memberSyncWarning}`
+        : 'Kết nối thành công · Đã đồng bộ thành viên và avatar';
       const sa = document.getElementById('syncActions'); if(sa) sa.style.display='flex';
-      Storage.setSyncMode('sheets'); this.updateSyncStatusBar(); this.showToast('Kết nối thành công! ✅');
+      this.updateSyncStatusBar();
+      this.showToast(
+        memberSyncWarning ? 'Đã kết nối, nhưng avatar chưa lên Sheet' : 'Đã kết nối và cập nhật cấu hình iPhone! ✅',
+        memberSyncWarning ? 'warning' : 'success'
+      );
     } else {
       if(se) se.className='connection-status error'; if(si) si.textContent='❌'; if(st) st.textContent=r.message;
       this.showToast('Lỗi: '+r.message, 'error');

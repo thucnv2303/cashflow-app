@@ -1730,6 +1730,11 @@ html[data-theme='light'] input[type="date"]::-webkit-calendar-picker-indicator {
   color: var(--expense);
 }
 
+.connection-status.warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+}
+
 .connection-status.loading {
   background: var(--surface-hover);
   color: var(--text-secondary);
