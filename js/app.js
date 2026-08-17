@@ -240,11 +240,11 @@ const App = {
     if (!container) return;
     container.innerHTML = this.setupMemberRows.map((row, i) => `
       <div class="setup-member-row" data-index="${i}">
-        <button type="button" class="avatar-select-btn" data-index="${i}">
-          <img src="${row.avatarImg}" alt="Avatar" class="avatar-img">
+        <button type="button" class="avatar-select-btn" data-index="${i}" aria-label="Đổi ảnh đại diện của ${row.name}">
+          <img src="${row.avatarImg}" alt="Ảnh đại diện của ${row.name}" class="avatar-img">
         </button>
         <input type="text" class="setup-member-name" value="${row.name}" placeholder="Tên thành viên" required>
-        ${this.setupMemberRows.length > 1 ? `<button type="button" class="btn-remove-member" data-index="${i}">✕</button>` : ''}
+        ${this.setupMemberRows.length > 1 ? `<button type="button" class="btn-remove-member" data-index="${i}" aria-label="Xóa ${row.name}">✕</button>` : '<span aria-hidden="true"></span>'}
       </div>
     `).join('');
 
@@ -3176,22 +3176,10 @@ const App = {
     document.getElementById('setupForm')?.addEventListener('submit', (e) => this.handleSetupSubmit(e));
     document.getElementById('addSetupMember')?.addEventListener('click', () => {
       if (this.setupMemberRows.length < 6) {
-        this.setupMemberRows.push({ avatarId: AVATARS[this.setupMemberRows.length % AVATARS.length].id, name: '' });
-        this.renderSetupMembers();
+        const avatar = AVATARS[this.setupMemberRows.length % AVATARS.length];
+        this.setupMemberRows.push({ avatarId: avatar.id, avatarImg: avatar.img, name: '' });
+        this.renderSetupRows();
       } else { this.showToast('Tối đa 6 thành viên','error'); }
-    });
-    
-    // Delegated: setup member list
-    document.getElementById('setupMemberList')?.addEventListener('click', (e) => {
-      const picker = e.target.closest('.avatar-picker');
-      if (picker) this.showAvatarPicker(parseInt(picker.dataset.index), picker);
-      const rm = e.target.closest('.remove-member-btn');
-      if (rm) { this.setupMemberRows.splice(parseInt(rm.dataset.index), 1); this.renderSetupMembers(); }
-    });
-    document.getElementById('setupMemberList')?.addEventListener('input', (e) => {
-      if (e.target.classList.contains('setup-member-name')) {
-        this.setupMemberRows[parseInt(e.target.dataset.index)].name = e.target.value;
-      }
     });
     
     // Member management
