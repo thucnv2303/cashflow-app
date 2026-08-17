@@ -650,6 +650,31 @@ const Storage = {
     if (Array.isArray(result.data)) this.saveMembers(result.data);
     return result;
   },
+  async reconcileMembersWithSheets() {
+    if (!this.isOnline()) throw new Error('Chưa bật đồng bộ Google Sheets');
+
+    const localMembers = this.getMembers();
+    const remoteMembers = await this.fetchMembersFromSheets();
+    const incoming = Array.isArray(remoteMembers) ? remoteMembers : [];
+    const incomingIds = new Set(incoming.map(member => member.id));
+    const localOnly = localMembers.filter(member => !incomingIds.has(member.id));
+
+    const merged = [
+      ...incoming.map(remoteMember => {
+        const localMember = localMembers.find(member => member.id === remoteMember.id);
+        return this._mergeMemberVersion(localMember, remoteMember).member;
+      }),
+      ...localOnly
+    ];
+
+    this.saveMembers(merged);
+    const result = await this.syncMembersToSheets();
+    return {
+      success: true,
+      members: this.getMembers(),
+      synced: result !== false
+    };
+  },
   async syncLoansToSheets() {
     if (!this.isOnline()) return false;
     const loans = this.getLoans();

@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icon-512.png">
   <link rel="icon" href="icon-512.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=3.24">
+  <link rel="stylesheet" href="css/style.css?v=3.25">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -555,7 +555,7 @@
           </div>
         </details>
 
-        <details class="settings-card">
+        <details class="settings-card" id="bankAutomationSettings">
           <summary class="settings-card-header"><div class="settings-card-info"><span class="settings-card-icon">🏦</span><div><strong>Ngân hàng tự động</strong><small>iPhone Shortcuts, SMS Banking, Gmail</small></div></div><span class="settings-card-arrow">▶</span></summary>
           <div class="settings-card-body">
             <div class="form-group"><label>Link Webhook:</label><div style="display:flex;gap:8px;"><input type="text" id="webhookUrlInput" class="filter-input" readonly style="flex:1;font-size:0.78rem;background:var(--surface-hover);"><button type="button" class="btn-ghost" id="copyWebhookBtn">📋</button></div></div>
@@ -572,6 +572,7 @@
                 <div><label style="font-size:0.72rem;">Giao dịch của</label><select id="iosMemberSelect" class="filter-input" style="width:100%;font-size:0.78rem;"></select></div>
               </div>
               <div id="iosShortcutConfig" style="font-size:0.72rem;line-height:1.55;margin-top:10px;padding:9px;border-radius:9px;background:var(--surface);border:1px dashed var(--border);word-break:break-word;"></div>
+              <div id="iosConfigStatus" style="font-size:0.7rem;line-height:1.4;margin-top:8px;color:var(--income);word-break:break-all;"></div>
               <button type="button" class="btn-primary" id="copyIosConfigBtn" style="width:100%;font-size:0.78rem;padding:8px 10px;margin-top:8px;">📋 Sao chép thông số Shortcuts</button>
             </div>
 
@@ -1079,9 +1080,9 @@
 
   <!-- Scripts -->
   <script src="js/utils.js?v=3.20"></script>
-  <script src="js/storage.js?v=3.25"></script>
+  <script src="js/storage.js?v=3.26"></script>
   <script src="js/charts.js?v=3.20"></script>
-  <script src="js/app.js?v=3.30"></script>
+  <script src="js/app.js?v=3.31"></script>
 
 
 </body>
