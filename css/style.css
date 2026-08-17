@@ -2177,19 +2177,24 @@ html[data-theme='light'] input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .setup-modal {
-  max-width: 500px;
-  width: 90%;
+  width: min(520px, calc(100% - 32px));
+  max-width: 520px;
+  max-height: min(760px, calc(100dvh - 32px));
+  padding: 28px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .setup-header {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .setup-emoji {
-  font-size: 3rem;
+  font-size: 2.5rem;
   display: block;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .setup-header h2 {
@@ -2197,56 +2202,236 @@ html[data-theme='light'] input[type="date"]::-webkit-calendar-picker-indicator {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  font-size: 1.65rem;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+.setup-header p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+#setupForm {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.setup-members {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.setup-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.setup-section-heading h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.setup-section-heading span {
+  color: var(--text-muted);
+  font-size: 0.72rem;
 }
 
 .setup-member-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin: 16px 0;
+  gap: 10px;
+  margin: 10px 0;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 3px;
 }
 
 .setup-member-row {
-  display: flex;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 36px;
+  gap: 12px;
   align-items: center;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
 }
 
-.setup-member-row .avatar-picker {
-  width: 44px;
-  height: 44px;
+.setup-member-row .avatar-select-btn {
+  width: 56px;
+  height: 56px;
+  padding: 0;
   border-radius: 50%;
-  background: var(--surface);
+  background: var(--bg-secondary);
   border: 2px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.4rem;
+  overflow: hidden;
   cursor: pointer;
-  flex-shrink: 0;
   transition: all 0.2s;
 }
 
-.setup-member-row .avatar-picker:hover,
-.setup-member-row .avatar-picker.selected {
+.setup-member-row .avatar-select-btn:hover,
+.setup-member-row .avatar-select-btn:focus-visible {
   border-color: var(--primary);
+  outline: 3px solid var(--primary-glow);
+}
+
+.setup-member-row .avatar-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .setup-member-row input {
-  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font: inherit;
 }
 
-.setup-member-row .remove-member-btn {
-  background: none;
-  border: none;
+.setup-member-row input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.setup-member-row .btn-remove-member {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid transparent;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 1.2rem;
-  padding: 4px;
+  font-size: 1rem;
+  padding: 0;
 }
 
-.setup-member-row .remove-member-btn:hover {
+.setup-member-row .btn-remove-member:hover,
+.setup-member-row .btn-remove-member:focus-visible {
   color: var(--danger);
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.18);
+}
+
+#addSetupMember {
+  align-self: flex-start;
+  min-height: 40px;
+  margin-bottom: 12px;
+}
+
+.setup-submit {
+  width: 100%;
+  min-height: 50px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  #setupModal {
+    align-items: center;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  }
+
+  #setupModal .setup-modal {
+    width: 100%;
+    max-width: 460px;
+    max-height: calc(100dvh - max(24px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
+    padding: 20px 16px 16px;
+    border-radius: 22px;
+    transform: scale(0.97);
+  }
+
+  #setupModal.active .setup-modal {
+    transform: scale(1);
+  }
+
+  .setup-header {
+    margin-bottom: 14px;
+  }
+
+  .setup-emoji {
+    font-size: 2rem;
+    margin-bottom: 4px;
+  }
+
+  .setup-header h2 {
+    font-size: clamp(1.3rem, 6vw, 1.55rem);
+  }
+
+  .setup-header p {
+    font-size: 0.82rem;
+  }
+
+  #setupForm > .form-group {
+    gap: 5px;
+    margin-bottom: 12px;
+  }
+
+  #setupForm > .form-group input {
+    min-height: 46px;
+  }
+
+  .setup-member-row {
+    grid-template-columns: 52px minmax(0, 1fr) 34px;
+    gap: 9px;
+    padding: 8px;
+    border-radius: 14px;
+  }
+
+  .setup-member-row .avatar-select-btn {
+    width: 52px;
+    height: 52px;
+  }
+
+  .setup-member-row .btn-remove-member {
+    width: 34px;
+    height: 34px;
+  }
+
+  .setup-submit {
+    min-height: 48px;
+  }
+}
+
+@media (max-height: 620px) and (max-width: 768px) {
+  #setupModal .setup-modal {
+    padding-top: 14px;
+  }
+
+  .setup-header {
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    text-align: left;
+    column-gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .setup-emoji {
+    grid-row: 1 / 3;
+    margin: 0;
+  }
+
+  .setup-header h2 {
+    font-size: 1.2rem;
+    margin: 0;
+  }
+
+  .setup-header p {
+    margin: 0;
+  }
 }
 
 /* Avatar Picker Popover */

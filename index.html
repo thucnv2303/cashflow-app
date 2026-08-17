@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icon-512.png">
   <link rel="icon" href="icon-512.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=3.23">
+  <link rel="stylesheet" href="css/style.css?v=3.24">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -23,7 +23,7 @@
         <div class="setup-header">
           <span class="setup-emoji">👨‍👩‍👧‍👦</span>
           <h2>Chào mừng đến CashFlow!</h2>
-          <p>Hãy thiết lập gia đình của bạn</p>
+          <p>Thiết lập nhanh để bắt đầu quản lý thu chi</p>
         </div>
         <form id="setupForm">
           <div class="form-group">
@@ -31,13 +31,16 @@
             <input type="text" id="familyName" placeholder="VD: Gia đình Thức" required>
           </div>
           <div class="setup-members" id="setupMembers">
-            <h3>Thành viên</h3>
+            <div class="setup-section-heading">
+              <h3>Thành viên</h3>
+              <span>Chạm vào ảnh để thay đổi</span>
+            </div>
             <div class="setup-member-list" id="setupMemberList">
               <!-- JS renders member inputs here -->
             </div>
             <button type="button" class="btn-ghost" id="addSetupMember">+ Thêm thành viên</button>
           </div>
-          <button type="submit" class="btn-primary btn-submit">🚀 Bắt đầu sử dụng</button>
+          <button type="submit" class="btn-primary btn-submit setup-submit">🚀 Bắt đầu sử dụng</button>
         </form>
       </div>
     </div>
@@ -1078,7 +1081,7 @@
   <script src="js/utils.js?v=3.20"></script>
   <script src="js/storage.js?v=3.25"></script>
   <script src="js/charts.js?v=3.20"></script>
-  <script src="js/app.js?v=3.29"></script>
+  <script src="js/app.js?v=3.30"></script>
 
 
 </body>
