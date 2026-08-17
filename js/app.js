@@ -2483,6 +2483,13 @@ const App = {
           </div>
 
           <div class="pending-controls-row">
+            <div class="pending-type-control">
+              <label style="font-size:0.72rem; color:var(--text-secondary); margin-bottom:2px; display:block;">Loại giao dịch:</label>
+              <select class="pending-select pending-type-select" data-id="${p.id}">
+                <option value="expense" ${isExp ? 'selected' : ''}>💸 Chi tiêu</option>
+                <option value="income" ${!isExp ? 'selected' : ''}>💰 Thu nhập</option>
+              </select>
+            </div>
             <div>
               <label style="font-size:0.72rem; color:var(--text-secondary); margin-bottom:2px; display:block;">Danh mục phân bổ:</label>
               <select class="pending-select pending-cat-select" data-id="${p.id}">
@@ -2490,7 +2497,7 @@ const App = {
               </select>
             </div>
             <div>
-              <label style="font-size:0.72rem; color:var(--text-secondary); margin-bottom:2px; display:block;">Chi cho ai:</label>
+              <label style="font-size:0.72rem; color:var(--text-secondary); margin-bottom:2px; display:block;">Giao dịch của:</label>
               <select class="pending-select pending-member-select" data-id="${p.id}">
                 ${memberOptions}
               </select>
@@ -2505,20 +2512,50 @@ const App = {
       `;
     }).join('');
 
+    // Cho phép sửa kết quả nhận diện trước khi phân bổ.
+    container.querySelectorAll('.pending-type-select').forEach(typeSelect => {
+      typeSelect.addEventListener('change', () => {
+        const itemEl = typeSelect.closest('.pending-card-item');
+        const catSelect = itemEl?.querySelector('.pending-cat-select');
+        const amountEl = itemEl?.querySelector('.pending-card-amount');
+        const targetPending = pending.find(x => x.id === typeSelect.dataset.id);
+        const selectedType = typeSelect.value === 'income' ? 'income' : 'expense';
+        const categories = selectedType === 'income' ? incomeCats : expenseCats;
+        const suggestedCategory = targetPending?.category || '';
+        const selectedCategory = categories.some(c => c.id === suggestedCategory)
+          ? suggestedCategory
+          : (categories[0]?.id || (selectedType === 'income' ? 'other_income' : 'other_expense'));
+
+        if (catSelect) {
+          catSelect.innerHTML = categories.map(c => `
+            <option value="${c.id}" ${c.id === selectedCategory ? 'selected' : ''}>${c.emoji} ${c.label}</option>
+          `).join('');
+        }
+
+        if (amountEl && targetPending) {
+          amountEl.classList.remove('expense', 'income');
+          amountEl.classList.add(selectedType);
+          amountEl.textContent = `${selectedType === 'expense' ? '-' : '+'}${formatCurrency(targetPending.amount)}`;
+        }
+      });
+    });
+
     // Bind approve & dismiss buttons
     container.querySelectorAll('.btn-approve-pending').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const id = btn.dataset.id;
         const itemEl = btn.closest('.pending-card-item');
+        const typeSelect = itemEl.querySelector('.pending-type-select');
         const catSelect = itemEl.querySelector('.pending-cat-select');
         const memSelect = itemEl.querySelector('.pending-member-select');
         const targetPending = pending.find(x => x.id === id);
         if (targetPending) {
+          const selectedType = typeSelect?.value === 'income' ? 'income' : 'expense';
           const selectedCat = catSelect ? catSelect.value : targetPending.category;
           const selectedMember = memSelect ? memSelect.value : targetPending.memberId;
           
           Storage.approvePendingTransaction(id, {
-            type: targetPending.type,
+            type: selectedType,
             amount: targetPending.amount,
             category: selectedCat,
             note: targetPending.note,
