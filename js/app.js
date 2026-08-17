@@ -2436,6 +2436,12 @@ const App = {
   renderPendingInbox() {
     const container = document.getElementById('pendingItemsList');
     if (!container) return;
+    const escapeHtml = (value = '') => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
     const pending = Storage.getPendingTransactions();
     const expenseCats = getExpenseCategories();
     const incomeCats = CATEGORIES.income;
@@ -2454,6 +2460,8 @@ const App = {
 
     container.innerHTML = pending.map((p, idx) => {
       const isExp = p.type === 'expense';
+      const safeBank = escapeHtml(p.bank || 'Ngân hàng');
+      const safeNote = escapeHtml(p.note || '');
       const availableCats = isExp ? expenseCats : incomeCats;
       const catOptions = availableCats.map(c => `
         <option value="${c.id}" ${c.id === p.category ? 'selected' : ''}>${c.emoji} ${c.label}</option>
@@ -2471,7 +2479,7 @@ const App = {
           <div class="pending-card-header">
             <div class="pending-bank-badge">
               <span>🏦</span>
-              <span>${p.bank || 'Ngân hàng'}</span>
+              <span>${safeBank}</span>
             </div>
             <div class="pending-card-amount ${p.type}">
               ${isExp ? '-' : '+'}${formatCurrency(p.amount)}
@@ -2479,7 +2487,13 @@ const App = {
           </div>
 
           <div class="pending-raw-text">
-            "${p.note || 'Biến động số dư'}"
+            <span class="pending-raw-label">Nội dung ngân hàng</span>
+            "${safeNote || 'Biến động số dư'}"
+          </div>
+
+          <div class="pending-note-control">
+            <label for="pending-note-${idx}">Ghi chú:</label>
+            <textarea id="pending-note-${idx}" class="pending-select pending-note-input" data-id="${p.id}" rows="2" placeholder="VD: Lương tháng 8, thanh toán Shopee...">${safeNote}</textarea>
           </div>
 
           <div class="pending-controls-row">
@@ -2548,6 +2562,7 @@ const App = {
         const typeSelect = itemEl.querySelector('.pending-type-select');
         const catSelect = itemEl.querySelector('.pending-cat-select');
         const memSelect = itemEl.querySelector('.pending-member-select');
+        const noteInput = itemEl.querySelector('.pending-note-input');
         const targetPending = pending.find(x => x.id === id);
         if (targetPending) {
           const selectedType = typeSelect?.value === 'income' ? 'income' : 'expense';
@@ -2558,7 +2573,7 @@ const App = {
             type: selectedType,
             amount: targetPending.amount,
             category: selectedCat,
-            note: targetPending.note,
+            note: noteInput ? noteInput.value.trim() : (targetPending.note || ''),
             date: targetPending.date ? targetPending.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
             memberId: selectedMember !== 'family' ? selectedMember : (members[0] ? members[0].id : 'dad'),
             beneficiaryId: selectedMember
