@@ -3902,6 +3902,10 @@ html[data-theme='light'] .pending-card-item {
   gap: 8px;
 }
 
+.pending-type-control {
+  grid-column: 1 / -1;
+}
+
 @media (max-width: 600px) {
   .pending-controls-row {
     grid-template-columns: 1fr;
