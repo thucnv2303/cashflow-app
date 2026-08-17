@@ -952,13 +952,14 @@ const App = {
     const st = document.getElementById('syncToggle');
     const ac = document.getElementById('apiConfig');
     const au = document.getElementById('apiUrl');
+    const url = Storage.getApiUrl();
     if (st) st.checked = Storage.getSyncMode() === 'sheets';
     if (ac) ac.style.display = Storage.getSyncMode() === 'sheets' ? 'block' : 'none';
+    if (au && au.value !== url) au.value = url;
     if (Storage.isOnline()) { const sa = document.getElementById('syncActions'); if(sa) sa.style.display = 'flex'; }
     
     // Webhook URL
     const webhookInput = document.getElementById('webhookUrlInput');
-    const url = Storage.getApiUrl();
     if (webhookInput) {
       webhookInput.value = url ? `${url}?action=bankNotification` : 'Vui lòng kết nối Google Sheets trước để nhận link Webhook cá nhân';
     }
@@ -3146,6 +3147,15 @@ const App = {
     
     // Settings
     document.getElementById('syncToggle')?.addEventListener('change', () => this.handleSyncToggle());
+    document.getElementById('apiUrl')?.addEventListener('input', (e) => {
+      const url = e.target.value.trim();
+      Storage.setApiUrl(url);
+      const webhookInput = document.getElementById('webhookUrlInput');
+      if (webhookInput) {
+        webhookInput.value = url ? `${url}?action=bankNotification` : 'Vui lòng kết nối Google Sheets trước để nhận link Webhook cá nhân';
+      }
+      this.updateIosShortcutPreview();
+    });
     document.getElementById('testConnectionBtn')?.addEventListener('click', () => this.handleTestConnection());
     document.getElementById('syncPullBtn')?.addEventListener('click', () => this.handleSyncPull());
     document.getElementById('syncPushBtn')?.addEventListener('click', () => this.handleSyncPush());
