@@ -43,9 +43,35 @@ const Storage = {
   // ==================== MEMBERS CRUD ====================
   getMembers() { return JSON.parse(localStorage.getItem(MEMBERS_KEY) || '[]'); },
   saveMembers(members) { localStorage.setItem(MEMBERS_KEY, JSON.stringify(members)); },
+  _memberUpdatedAt(member) {
+    const value = Date.parse(member?.updatedAt || '');
+    return Number.isFinite(value) ? value : 0;
+  },
+  _isCustomMemberAvatar(member) {
+    return String(member?.avatarImg || '').startsWith('data:image/') ||
+      String(member?.avatarId || '').startsWith('uploaded_');
+  },
+  _mergeMemberVersion(local, incoming) {
+    if (!local) return { member: incoming, localWon: false };
+
+    const localTime = this._memberUpdatedAt(local);
+    const incomingTime = this._memberUpdatedAt(incoming);
+    if (localTime > incomingTime) return { member: local, localWon: true };
+    if (incomingTime > localTime) return { member: incoming, localWon: false };
+
+    // Legacy rows did not have updatedAt. Preserve a locally uploaded photo over
+    // a preset/default avatar once, then stamp it so all devices can converge.
+    if (!localTime && this._isCustomMemberAvatar(local) && !this._isCustomMemberAvatar(incoming)) {
+      return {
+        member: { ...local, updatedAt: new Date().toISOString() },
+        localWon: true
+      };
+    }
+    return { member: incoming, localWon: false };
+  },
   addMember(member) {
     const members = this.getMembers();
-    const newMember = { ...member, id: generateId() };
+    const newMember = { ...member, id: generateId(), updatedAt: new Date().toISOString() };
     members.push(newMember);
     this.saveMembers(members);
     if (this.isOnline()) {
@@ -53,13 +79,13 @@ const Storage = {
     }
     return newMember;
   },
-  updateMember(id, data) {
+  updateMember(id, data, options = {}) {
     const members = this.getMembers();
     const idx = members.findIndex(m => m.id === id);
     if (idx !== -1) {
-      members[idx] = { ...members[idx], ...data };
+      members[idx] = { ...members[idx], ...data, updatedAt: new Date().toISOString() };
       this.saveMembers(members);
-      if (this.isOnline()) {
+      if (this.isOnline() && options.sync !== false) {
         this.syncMembersToSheets().catch(e => console.warn(e));
       }
       return members[idx];
@@ -592,7 +618,12 @@ const Storage = {
   async syncMembersToSheets() {
     if (!this.isOnline()) return false;
     const members = this.getMembers();
-    return this._sheetApiCall('syncMembers', { data: members });
+    const result = await this._sheetApiCall('syncMembers', { data: members });
+    if (!result || !result.success) {
+      throw new Error(result?.error || 'Google Sheets không xác nhận đồng bộ thành viên');
+    }
+    if (Array.isArray(result.data)) this.saveMembers(result.data);
+    return result;
   },
   async syncLoansToSheets() {
     if (!this.isOnline()) return false;
@@ -722,28 +753,20 @@ const Storage = {
           const incomingIds = new Set(membersData.map(m => m.id));
           const localOnly = localMembers.filter(l => !incomingIds.has(l.id));
 
-          // Smart merge: never wipe out a member's valid avatarImg or local changes
+          let shouldPushMembers = localOnly.length > 0;
           const merged = [
             ...membersData.map(inc => {
               const local = localMembers.find(l => l.id === inc.id);
-              if (local) {
-                return {
-                  ...inc,
-                  name: local.name || inc.name,
-                  avatarImg: (local.avatarImg && local.avatarImg.length > 5) ? local.avatarImg : (inc.avatarImg || ''),
-                  avatarId: local.avatarId || inc.avatarId || 'avatar_dad',
-                  avatar: local.avatar || inc.avatar || '👤',
-                  color: local.color || inc.color || '#e77d3e'
-                };
-              }
-              return inc;
+              const resolved = this._mergeMemberVersion(local, inc);
+              if (resolved.localWon) shouldPushMembers = true;
+              return resolved.member;
             }),
             ...localOnly
           ];
 
           this.saveMembers(merged);
 
-          if (localOnly.length > 0) {
+          if (shouldPushMembers) {
             this.syncMembersToSheets().catch(e => console.warn('Auto-push local members failed:', e));
           }
         } else if (this.getMembers().length > 0) {

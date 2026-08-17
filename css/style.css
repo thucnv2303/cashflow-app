@@ -3995,6 +3995,11 @@ html[data-theme='light'] .pending-card-item {
   flex-shrink: 0;
 }
 
+.quick-beneficiary-selector {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+
 .quick-cat-chip {
   padding: 6px 12px;
   border-radius: 20px;

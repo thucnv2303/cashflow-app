@@ -2,6 +2,184 @@
 const APPS_SCRIPT_CODE = "/**\n * CashFlow v2 - Google Apps Script API\n * Hỗ trợ: Transactions, Loans, Members\n * \n * Hướng dẫn:\n * 1. Mở Google Sheets → Tiện ích mở rộng → Apps Script\n * 2. Xóa code cũ, dán code này vào → Lưu\n * 3. Chọn hàm \"setupSheet\" → ▶️ Run → cấp quyền\n * 4. Deploy → New deployment → Web app → Anyone → Deploy → copy URL\n * 5. Dán URL vào CashFlow → Cài đặt → Kiểm tra → Xong!\n */\n\nfunction setupSheet() {\n  const ss = SpreadsheetApp.getActiveSpreadsheet();\n  \n  // Sheet Transactions\n  let sheet = ss.getSheetByName('Transactions');\n  if (!sheet) {\n    sheet = ss.insertSheet('Transactions');\n    sheet.appendRow(['ID', 'Loại', 'Số tiền', 'Danh mục', 'Ghi chú', 'Ngày', 'Thành viên', 'Ngày tạo', 'Chi cho ai']);\n    sheet.setFrozenRows(1);\n    sheet.getRange('A1:I1').setFontWeight('bold');\n  }\n  \n  // Sheet Loans\n  let loanSheet = ss.getSheetByName('Loans');\n  if (!loanSheet) {\n    loanSheet = ss.insertSheet('Loans');\n    loanSheet.appendRow(['ID', 'Tên', 'Emoji', 'Loại', 'Gốc vay', 'Lãi suất', 'Kỳ hạn', 'Trả/tháng', 'Ngày BĐ', 'Ghi chú', 'Ngày tạo']);\n    loanSheet.setFrozenRows(1);\n    loanSheet.getRange('A1:K1').setFontWeight('bold');\n  }\n  \n  // Sheet Members\n  let memberSheet = ss.getSheetByName('Members');\n  if (!memberSheet) {\n    memberSheet = ss.insertSheet('Members');\n    memberSheet.appendRow(['ID', 'Tên', 'Avatar', 'Màu', 'AvatarImg', 'AvatarId']);\n    memberSheet.setFrozenRows(1);\n    memberSheet.getRange('A1:F1').setFontWeight('bold');\n  }\n\n  // Sheet Budgets\n  let budgetSheet = ss.getSheetByName('Budgets');\n  if (!budgetSheet) {\n    budgetSheet = ss.insertSheet('Budgets');\n    budgetSheet.appendRow(['CategoryID', 'Số tiền', 'Cập nhật']);\n    budgetSheet.setFrozenRows(1);\n    budgetSheet.getRange('A1:C1').setFontWeight('bold');\n  }\n\n  // Sheet CustomCategories\n  let catSheet = ss.getSheetByName('CustomCategories');\n  if (!catSheet) {\n    catSheet = ss.insertSheet('CustomCategories');\n    catSheet.appendRow(['ID', 'Tên', 'Emoji', 'Loại', 'Ngày tạo']);\n    catSheet.setFrozenRows(1);\n    catSheet.getRange('A1:E1').setFontWeight('bold');\n  }\n\n  // Sheet SavingsGoals\n  let savingsSheet = ss.getSheetByName('SavingsGoals');\n  if (!savingsSheet) {\n    savingsSheet = ss.insertSheet('SavingsGoals');\n    savingsSheet.appendRow(['ID', 'Tên', 'Emoji', 'Mục tiêu', 'Hiện có', 'Hạn ngày', 'Thành viên', 'Ngày tạo']);\n    savingsSheet.setFrozenRows(1);\n    savingsSheet.getRange('A1:H1').setFontWeight('bold');\n  }\n\n  // Sheet SavingsLogs\n  let logsSheet = ss.getSheetByName('SavingsLogs');\n  if (!logsSheet) {\n    logsSheet = ss.insertSheet('SavingsLogs');\n    logsSheet.appendRow(['ID', 'GoalID', 'GoalName', 'Loại', 'Số tiền', 'Thành viên', 'Ngày', 'Ghi chú', 'Ngày tạo']);\n    logsSheet.setFrozenRows(1);\n    logsSheet.getRange('A1:I1').setFontWeight('bold');\n  }\n\n  // Sheet PendingTransactions (Bank Webhook Inbox)\n  let pendingSheet = ss.getSheetByName('PendingTransactions');\n  if (!pendingSheet) {\n    pendingSheet = ss.insertSheet('PendingTransactions');\n    pendingSheet.appendRow(['ID', 'Ngân hàng', 'Loại', 'Số tiền', 'Nội dung thô', 'Danh mục gợi ý', 'Thành viên', 'Ngày giờ', 'Trạng thái', 'Ngày tạo']);\n    pendingSheet.setFrozenRows(1);\n    pendingSheet.getRange('A1:J1').setFontWeight('bold');\n  }\n}\n\nfunction getSheet(name) {\n  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);\n}\n\nfunction findRowById(sheet, id) {\n  const data = sheet.getDataRange().getValues();\n  for (let i = 1; i < data.length; i++) {\n    if (data[i][0] === id) return i + 1;\n  }\n  return -1;\n}\n\nfunction responseJson(data, callback) {\n  var json = JSON.stringify(data);\n  if (callback) {\n    return ContentService.createTextOutput(callback + '(' + json + ')')\n      .setMimeType(ContentService.MimeType.JAVASCRIPT);\n  }\n  return ContentService.createTextOutput(json)\n    .setMimeType(ContentService.MimeType.JSON);\n}\n\nfunction safeParseJson(data) {\n  if (!data) return null;\n  if (typeof data === 'object') return data;\n  if (typeof data === 'string') {\n    try { return JSON.parse(data); } catch(e) { return null; }\n  }\n  return null;\n}\n\nfunction doPost(e) {\n  // Support both JSON body in postData and standard form parameters\n  if (e && e.postData && e.postData.contents) {\n    try {\n      var body = JSON.parse(e.postData.contents);\n      e.parameter = e.parameter || {};\n      for (var k in body) { e.parameter[k] = body[k]; }\n    } catch(err) {}\n  }\n  return doGet(e);\n}\n\nfunction doGet(e) {\n  e = e || {};\n  e.parameter = e.parameter || {};\n  const action = e.parameter.action || 'getAll';\n  const cb = e.parameter.callback || null;\n  \n  if (action === 'ping') {\n    return responseJson({ status: 'ok', message: 'Kết nối thành công!' }, cb);\n  }\n\n  if (action === 'portal' || action === 'auth') {\n    const memberId = e.parameter.member || 'mom';\n    return renderMemberPortalHtml(memberId);\n  }\n\n  if (action === 'registerMemberEmail') {\n    const email = e.parameter.email || '';\n    const member = e.parameter.member || 'mom';\n    const ss = SpreadsheetApp.getActiveSpreadsheet();\n    let meSheet = ss.getSheetByName('MemberEmails');\n    if (!meSheet) {\n      meSheet = ss.insertSheet('MemberEmails');\n      meSheet.appendRow(['Email', 'Role', 'RegisteredAt', 'Status']);\n      meSheet.setFrozenRows(1);\n      meSheet.getRange('A1:D1').setFontWeight('bold');\n    }\n    meSheet.appendRow([email, member, new Date().toISOString(), 'active']);\n    return responseJson({ success: true, message: 'Đã đăng ký email ' + email }, cb);\n  }\n  \n  const lock = LockService.getScriptLock();\n  try {\n    lock.waitLock(10000);\n    \n    // ==================== TRANSACTIONS ====================\n    if (action === 'getAll') {\n      const sheet = getSheet('Transactions');\n      if (!sheet) return responseJson({ success: true, data: [] }, cb);\n      const data = sheet.getDataRange().getValues();\n      const transactions = [];\n      for (let i = 1; i < data.length; i++) {\n        if (data[i][0]) {\n          transactions.push({\n            id: String(data[i][0]),\n            type: String(data[i][1] || 'expense'),\n            amount: Number(data[i][2] || 0),\n            category: String(data[i][3] || 'other'),\n            note: String(data[i][4] || ''),\n            date: String(data[i][5] || ''),\n            memberId: String(data[i][6] || ''),\n            createdAt: String(data[i][7] || ''),\n            beneficiaryId: String(data[i][8] || '')\n          });\n        }\n      }\n      return responseJson({ success: true, data: transactions }, cb);\n    }\n    \n    if (action === 'add') {\n      const obj = safeParseJson(e.parameter.data) || {};\n      getSheet('Transactions').appendRow([\n        obj.id || '', obj.type || '', obj.amount || 0,\n        obj.category || '', obj.note || '', obj.date || '',\n        obj.memberId || '', obj.createdAt || new Date().toISOString(),\n        obj.beneficiaryId || ''\n      ]);\n      return responseJson({ success: true, message: 'Đã thêm giao dịch' }, cb);\n    }\n    \n    if (action === 'update') {\n      const id = e.parameter.id;\n      const obj = safeParseJson(e.parameter.data) || {};\n      const sheet = getSheet('Transactions');\n      const rowNum = findRowById(sheet, id);\n      if (rowNum > -1) {\n        sheet.getRange(rowNum, 1, 1, 9).setValues([[\n          obj.id || id, obj.type || '', obj.amount || 0,\n          obj.category || '', obj.note || '', obj.date || '',\n          obj.memberId || '', obj.createdAt || '', obj.beneficiaryId || ''\n        ]]);\n        return responseJson({ success: true }, cb);\n      }\n      throw new Error('Không tìm thấy giao dịch');\n    }\n    \n    if (action === 'delete') {\n      const sheet = getSheet('Transactions');\n      const rowNum = findRowById(sheet, e.parameter.id);\n      if (rowNum > -1) { sheet.deleteRow(rowNum); return responseJson({ success: true }, cb); }\n      throw new Error('Không tìm thấy');\n    }\n    \n    if (action === 'sync') {\n      const transactions = safeParseJson(e.parameter.data) || [];\n      const sheet = getSheet('Transactions');\n      const lastRow = sheet.getLastRow();\n      if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();\n      if (transactions && transactions.length > 0) {\n        const rows = transactions.map(t => [\n          t.id || '', t.type || '', t.amount || 0,\n          t.category || '', t.note || '', t.date || '',\n          t.memberId || '', t.createdAt || '', t.beneficiaryId || ''\n        ]);\n        sheet.getRange(2, 1, rows.length, 9).setValues(rows);\n      }\n      return responseJson({ success: true, message: 'Đã đồng bộ giao dịch' }, cb);\n    }\n    \n    // ==================== LOANS ====================\n    if (action === 'getLoans') {\n      const sheet = getSheet('Loans');\n      if (!sheet) return responseJson({ success: true, data: [] }, cb);\n      const data = sheet.getDataRange().getValues();\n      const loans = [];\n      for (let i = 1; i < data.length; i++) {\n        if (data[i][0]) {\n          loans.push({\n            id: data[i][0], name: data[i][1], emoji: data[i][2],\n            loanType: data[i][3], principal: Number(data[i][4]),\n            interestRate: Number(data[i][5]), termMonths: Number(data[i][6]),\n            monthlyPayment: Number(data[i][7]), startDate: data[i][8],\n            note: data[i][9], createdAt: data[i][10]\n          });\n        }\n      }\n      return responseJson({ success: true, data: loans }, cb);\n    }\n    \n    if (action === 'syncLoans') {\n      const loans = safeParseJson(e.parameter.data) || [];\n      const sheet = getSheet('Loans');\n      const lastRow = sheet.getLastRow();\n      if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();\n      if (loans && loans.length > 0) {\n        const rows = loans.map(l => [\n          l.id || '', l.name || '', l.emoji || '', l.loanType || '',\n          l.principal || 0, l.interestRate || 0, l.termMonths || 0,\n          l.monthlyPayment || 0, l.startDate || '', l.note || '', l.createdAt || ''\n        ]);\n        sheet.getRange(2, 1, rows.length, 11).setValues(rows);\n      }\n      return responseJson({ success: true, message: 'Đã đồng bộ khoản vay' }, cb);\n    }\n    \n    // ==================== MEMBERS ====================\n    if (action === 'getMembers') {\n      const sheet = getSheet('Members');\n      if (!sheet) return responseJson({ success: true, data: [] }, cb);\n      const data = sheet.getDataRange().getValues();\n      const members = [];\n      for (let i = 1; i < data.length; i++) {\n        if (data[i][0]) {\n          members.push({\n            id: String(data[i][0]),\n            name: String(data[i][1] || ''),\n            avatar: String(data[i][2] || '👤'),\n            color: String(data[i][3] || '#e77d3e'),\n            avatarImg: String(data[i][4] || ''),\n            avatarId: String(data[i][5] || '')\n          });\n        }\n      }\n      return responseJson({ success: true, data: members }, cb);\n    }\n    \n    if (action === 'syncMembers') {\n      const members = safeParseJson(e.parameter.data) || [];\n      const sheet = getSheet('Members');\n      if (!sheet) return responseJson({ success: false, error: 'Sheet Members không tồn tại' }, cb);\n      const lastRow = sheet.getLastRow();\n      if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();\n      if (members && members.length > 0) {\n        const rows = members.map(m => [\n          m.id || '',\n          m.name || '',\n          m.avatar || '',\n          m.color || '',\n          m.avatarImg || '',\n          m.avatarId || ''\n        ]);\n        sheet.getRange(2, 1, rows.length, 6).setValues(rows);\n      }\n      return responseJson({ success: true, message: 'Đã đồng bộ thành viên' }, cb);\n    }\n    \n    // ==================== BUDGETS ====================\n    if (action === 'getBudgets') {\n      const sheet = getSheet('Budgets');\n      if (!sheet) return responseJson({ success: true, data: {} }, cb);\n      const data = sheet.getDataRange().getValues();\n      const budgets = {};\n      for (let i = 1; i < data.length; i++) {\n        if (data[i][0]) {\n          budgets[String(data[i][0])] = Number(data[i][1] || 0);\n        }\n      }\n      return responseJson({ success: true, data: budgets }, cb);\n    }\n\n    if (action === 'syncBudgets') {\n      const budgets = safeParseJson(e.parameter.data) || {};\n      const sheet = getSheet('Budgets');\n      if (!sheet) return responseJson({ success: false, error: 'Sheet Budgets không tồn tại' }, cb);\n      const lastRow = sheet.getLastRow();\n      if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();\n      if (budgets && typeof budgets === 'object') {\n        const rows = Object.keys(budgets).map(k => [k, Number(budgets[k] || 0), new Date().toISOString()]);\n        if (rows.length > 0) {\n          sheet.getRange(2, 1, rows.length, 3).setValues(rows);\n        }\n      }\n      return responseJson({ success: true, message: 'Đã đồng bộ ngân sách' }, cb);\n    }\n\n    // ==================== CUSTOM CATEGORIES ====================\n    if (action === 'getCustomCats') {\n      const sheet = getSheet('CustomCategories');\n      if (!sheet) return responseJson({ success: true, data: [] }, cb);\n      const data = sheet.getDataRange().getValues();\n      const cats = [];\n      for (let i = 1; i < data.length; i++) {\n        if (data[i][0]) {\n          cats.push({\n            id: String(data[i][0]),\n            label: String(data[i][1] || ''),\n            emoji: String(data[i][2] || '📦'),\n            type: String(data[i][3] || 'expense'),\n            createdAt: String(data[i][4] || '')\n          });\n        }\n      }\n      return responseJson({ success: true, data: cats }, cb);\n    }\n\n    if (action === 'syncCustomCats') {\n      const cats = safeParseJson(e.parameter.data) || [];\n      const sheet = getSheet('CustomCategories');\n      if (!sheet) return responseJson({ success: false, error: 'Sheet CustomCategories không tồn tại' }, cb);\n      const lastRow = sheet.getLastRow();\n      if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();\n      if (cats && cats.length > 0) {\n        const rows = cats.map(c => [c.id || '', c.label || '', c.emoji || '📦', c.type || 'expense', c.createdAt || new Date().toISOString()]);\n        sheet.getRange(2, 1, rows.length, 5).setValues(rows);\n      }\n      return responseJson({ success: true, message: 'Đã đồng bộ danh mục tùy chỉnh' }, cb);\n    }\n\n    // ==================== SAVINGS GOALS & LOGS ====================\n    if (action === 'getSavings') {\n      const gSheet = getSheet('SavingsGoals');\n      const lSheet = getSheet('SavingsLogs');\n      const goals = [];\n      const logs = [];\n\n      if (gSheet) {\n        const data = gSheet.getDataRange().getValues();\n        for (let i = 1; i < data.length; i++) {\n          if (data[i][0]) {\n            goals.push({\n              id: String(data[i][0]),\n              name: String(data[i][1] || ''),\n              emoji: String(data[i][2] || '🐷'),\n              targetAmount: Number(data[i][3] || 0),\n              currentAmount: Number(data[i][4] || 0),\n              targetDate: String(data[i][5] || ''),\n              memberId: String(data[i][6] || 'family'),\n              createdAt: String(data[i][7] || '')\n            });\n          }\n        }\n      }\n\n      if (lSheet) {\n        const data = lSheet.getDataRange().getValues();\n        for (let i = 1; i < data.length; i++) {\n          if (data[i][0]) {\n            logs.push({\n              id: String(data[i][0]),\n              goalId: String(data[i][1] || ''),\n              goalName: String(data[i][2] || ''),\n              type: String(data[i][3] || 'deposit'),\n              amount: Number(data[i][4] || 0),\n              memberId: String(data[i][5] || 'family'),\n              date: String(data[i][6] || ''),\n              note: String(data[i][7] || ''),\n              createdAt: String(data[i][8] || '')\n            });\n          }\n        }\n      }\n\n      return responseJson({ success: true, data: { goals, logs } }, cb);\n    }\n\n    if (action === 'syncSavings') {\n      const payload = typeof e.parameter.goals === 'string' ? JSON.parse(e.parameter.goals) : e.parameter.goals;\n      const goals = Array.isArray(payload) ? payload : (e.parameter.goals ? JSON.parse(e.parameter.goals) : []);\n      const logs = e.parameter.logs ? (typeof e.parameter.logs === 'string' ? JSON.parse(e.parameter.logs) : e.parameter.logs) : [];\n\n      const gSheet = getSheet('SavingsGoals');\n      if (gSheet) {\n        const lr = gSheet.getLastRow();\n        if (lr > 1) gSheet.getRange(2, 1, lr - 1, gSheet.getLastColumn()).clearContent();\n        if (goals && goals.length > 0) {\n          const rows = goals.map(g => [g.id || '', g.name || '', g.emoji || '🐷', Number(g.targetAmount || 0), Number(g.currentAmount || 0), g.targetDate || '', g.memberId || 'family', g.createdAt || '']);\n          gSheet.getRange(2, 1, rows.length, 8).setValues(rows);\n        }\n      }\n\n      const lSheet = getSheet('SavingsLogs');\n      if (lSheet) {\n        const lr = lSheet.getLastRow();\n        if (lr > 1) lSheet.getRange(2, 1, lr - 1, lSheet.getLastColumn()).clearContent();\n        if (logs && logs.length > 0) {\n          const rows = logs.map(l => [l.id || '', l.goalId || '', l.goalName || '', l.type || 'deposit', Number(l.amount || 0), l.memberId || 'family', l.date || '', l.note || '', l.createdAt || '']);\n          lSheet.getRange(2, 1, rows.length, 9).setValues(rows);\n        }\n      }\n\n      return responseJson({ success: true, message: 'Đã đồng bộ tiết kiệm' }, cb);\n    }\n\n    // ==================== BANK NOTIFICATION WEBHOOK & PENDING INBOX ====================\n    if (action === 'bankNotification') {\n      const rawText = String(e.parameter.text || e.parameter.body || e.parameter.content || e.parameter.message || '');\n      const title = String(e.parameter.title || e.parameter.sender || '');\n      const bank = String(e.parameter.bank || title || 'Ngân hàng');\n      const member = String(e.parameter.member || 'dad');\n      const isDirect = String(e.parameter.direct || e.parameter.auto || '') === '1' || String(e.parameter.direct || '') === 'true';\n\n      if (!rawText && !title) {\n        return responseJson({ success: false, error: 'Thiếu nội dung thông báo' }, cb);\n      }\n\n      const classified = classifyBankNotification(rawText, title, bank);\n      const nowStr = new Date().toISOString();\n      const id = 'pend_' + new Date().getTime() + '_' + Math.floor(Math.random() * 1000);\n\n      // If direct mode enabled, write straight into Transactions sheet!\n      if (isDirect && classified.amount > 0) {\n        const transSheet = getSheet('Transactions');\n        if (transSheet) {\n          const transId = 'trans_' + new Date().getTime() + '_' + Math.floor(Math.random() * 1000);\n          const dateOnly = nowStr.slice(0, 10);\n          transSheet.appendRow([\n            transId,\n            classified.type,\n            classified.amount,\n            classified.category,\n            classified.note || 'Nhập nhanh từ Shortcut',\n            dateOnly,\n            member,\n            nowStr,\n            'family'\n          ]);\n        }\n      }\n\n      // Also record in PendingTransactions\n      const pendingSheet = getSheet('PendingTransactions');\n      if (pendingSheet) {\n        pendingSheet.appendRow([\n          id,\n          bank,\n          classified.type,\n          classified.amount,\n          classified.note,\n          classified.category,\n          member,\n          nowStr,\n          isDirect ? 'approved' : 'pending',\n          nowStr\n        ]);\n      }\n\n      return responseJson({\n        success: true,\n        message: isDirect ? 'Đã ghi nhận trực tiếp vào sổ giao dịch! 🎉' : 'Đã nhận thông báo ngân hàng',\n        transaction: {\n          id: id,\n          bank: bank,\n          type: classified.type,\n          amount: classified.amount,\n          note: classified.note,\n          category: classified.category,\n          memberId: member,\n          date: nowStr,\n          status: isDirect ? 'approved' : 'pending'\n        }\n      }, cb);\n    }\n\n    if (action === 'getPending') {\n      const sheet = getSheet('PendingTransactions');\n      if (!sheet) return responseJson({ success: true, data: [] }, cb);\n      const data = sheet.getDataRange().getValues();\n      const pending = [];\n      for (let i = 1; i < data.length; i++) {\n        if (data[i][0] && String(data[i][8]) === 'pending') {\n          pending.push({\n            id: String(data[i][0]),\n            bank: String(data[i][1] || 'Ngân hàng'),\n            type: String(data[i][2] || 'expense'),\n            amount: Number(data[i][3] || 0),\n            note: String(data[i][4] || ''),\n            category: String(data[i][5] || 'other_expense'),\n            memberId: String(data[i][6] || 'family'),\n            date: String(data[i][7] || ''),\n            status: String(data[i][8] || 'pending'),\n            createdAt: String(data[i][9] || '')\n          });\n        }\n      }\n      return responseJson({ success: true, data: pending }, cb);\n    }\n\n    if (action === 'approvePending') {\n      const pendingId = String(e.parameter.pendingId || e.parameter.id);\n      const data = safeParseJson(e.parameter.data);\n      const transSheet = getSheet('Transactions');\n      if (transSheet && data) {\n        const transId = data.id || ('trans_' + new Date().getTime());\n        transSheet.appendRow([\n          transId,\n          data.type || 'expense',\n          Number(data.amount || 0),\n          data.category || 'other_expense',\n          data.note || '',\n          data.date || new Date().toISOString().slice(0, 10),\n          data.memberId || 'dad',\n          new Date().toISOString(),\n          data.beneficiaryId || data.memberId || 'family'\n        ]);\n      }\n      const pendingSheet = getSheet('PendingTransactions');\n      if (pendingSheet && pendingId) {\n        const rowNum = findRowById(pendingSheet, pendingId);\n        if (rowNum > -1) {\n          pendingSheet.getRange(rowNum, 9).setValue('approved');\n        }\n      }\n      return responseJson({ success: true, message: 'Đã duyệt giao dịch' }, cb);\n    }\n\n    if (action === 'deletePending') {\n      const pendingId = String(e.parameter.id || e.parameter.pendingId);\n      const pendingSheet = getSheet('PendingTransactions');\n      if (pendingSheet && pendingId) {\n        const rowNum = findRowById(pendingSheet, pendingId);\n        if (rowNum > -1) {\n          pendingSheet.getRange(rowNum, 9).setValue('rejected');\n        }\n      }\n      return responseJson({ success: true, message: 'Đã bỏ qua' }, cb);\n    }\n\n    if (action === 'scanGmail') {\n      const res = scanBankEmails();\n      return responseJson({\n        success: true,\n        addedCount: res.addedCount,\n        message: 'Đã quét Gmail thành công! Đã thêm ' + res.addedCount + ' giao dịch.'\n      }, cb);\n    }\n\n    return responseJson({ success: false, error: 'Unknown action: ' + action }, cb);\n  } catch (err) {\n    return responseJson({ success: false, error: err.toString() }, cb);\n  } finally {\n    lock.releaseLock();\n  }\n}\n\n// ==================== SMART VIETNAMESE CLASSIFIER ====================\nfunction classifyBankNotification(rawText, title, bank) {\n  const fullText = (title + ' ' + rawText + ' ' + (bank || '')).toLowerCase();\n  \n  // 1. Extract Amount with support for k, tr, triệu, nghìn, cành, lít\n  let amount = 0;\n  \n  const kMatch = rawText.match(/(\\d+(?:[\\.,]\\d+)?)\\s*(?:k|nghìn|nghin|ng|cành|canh)\\b/i);\n  const trMatch = rawText.match(/(\\d+)(?:[\\.,](\\d+))?\\s*(?:tr|triệu|trieu|m)\\b/i) || rawText.match(/(\\d+)\\s*tr\\s*(\\d+)/i);\n  const stdMatch = rawText.match(/(?:Số tiền|Số tiền GD|So tien|Giá trị GD|Số tiền giao dịch|Số dư thay đổi|PS|GD)[\\:\\s]*([\\+\\-]?\\s*[\\d\\.\\,]{3,15})\\s*(?:vnd|vnđ|đ|d\\b)/i) ||\n                   rawText.match(/(?:[\\+\\-]|gd:?\\s*[\\+\\-]?|ps:?\\s*[\\+\\-]?)?\\s*([\\d\\.\\,]{3,15})\\s*(?:vnd|vnđ|đ|d\\b)/i) ||\n                   rawText.match(/([\\d\\.\\,]{4,15})\\s*(?:vnd|vnđ|đ|d\\b)/i);\n  const plainMatch = rawText.match(/\\b(\\d{4,12})\\b/);\n\n  if (kMatch && kMatch[1]) {\n    const num = parseFloat(kMatch[1].replace(',', '.'));\n    amount = Math.round(num * 1000);\n  } else if (trMatch) {\n    if (trMatch[2]) {\n      const whole = parseInt(trMatch[1], 10);\n      const dec = trMatch[2].length === 1 ? parseInt(trMatch[2], 10) * 100000 : parseInt(trMatch[2], 10) * Math.pow(10, 6 - trMatch[2].length);\n      amount = whole * 1000000 + dec;\n    } else {\n      const num = parseFloat(trMatch[1]);\n      amount = Math.round(num * 1000000);\n    }\n  } else if (stdMatch && stdMatch[1]) {\n    const cleanNum = stdMatch[1].replace(/[\\.\\,\\s\\+\\-]/g, '');\n    amount = Number(cleanNum) || 0;\n  } else if (plainMatch && plainMatch[1]) {\n    amount = Number(plainMatch[1]) || 0;\n  }\n\n  // 2. Extract Type\n  let type = 'expense';\n  if (rawText.includes('+') || fullText.includes('nhan tien') || fullText.includes('nhận tiền') || fullText.includes('cong tien') || fullText.includes('cộng tiền') || fullText.includes('thu ') || fullText.includes('credit') || fullText.includes('tang so du')) {\n    type = 'income';\n  } else if (rawText.includes('-') || fullText.includes('tru tien') || fullText.includes('trừ tiền') || fullText.includes('thanh toan') || fullText.includes('thanh toán') || fullText.includes('chi ') || fullText.includes('debit') || fullText.includes('giam so du')) {\n    type = 'expense';\n  }\n\n  // 3. Smart Category Prediction based on keywords\n  let category = type === 'income' ? 'salary' : 'other_expense';\n  if (type === 'expense') {\n    if (/ăn|uống|highlands|phở|bún|cơm|quán|cafe|cà phê|trà sữa|starbucks|kfc|lotteria|pizza|food|shopeefood|grabfood|befood|baemin|tokyo deli|haidilao|gogi|kichi|nhà hàng|bánh mì|ăn sáng|ăn trưa|ăn tối|lẩu|nướng|nhậu|bia|chè|bánh/i.test(fullText)) {\n      category = 'food';\n    } else if (/xăng|xang|grab|be |xanh sm|taxi|petrolimex|pvoil|gửi xe|giữ xe|vé xe|cầu đường|epass|vetc|đỗ xe|xe buýt|bus|rửa xe|sửa xe/i.test(fullText)) {\n      category = 'transport';\n    } else if (/mua|sắm|shopee|lazada|tiki|sendo|winmart|co\\.?op|bách hóa|bach hoa|siêu thị|uniqlo|zara|h&m|mall|quần|áo|giày|dép|túi|mỹ phẩm|son/i.test(fullText)) {\n      category = 'shopping';\n    } else if (/điện|nước|evn|điện lực|tiền điện|tiền nước|cấp nước|viettel|vnpt|fpt|internet|wifi|mobifone|vinaphone|chung cư|phí quản lý|vệ sinh|rác|gas/i.test(fullText)) {\n      category = 'bills';\n    } else if (/thuốc|thuoc|pharmacity|long châu|an khang|bệnh viện|benh vien|phòng khám|bác sĩ|nha khoa|răng|khám|y tế|clinic|spa/i.test(fullText)) {\n      category = 'health';\n    } else if (/học|hoc|học phí|trường|mầm non|tiểu học|tiếng anh|ila|vus|apollo|sách|vở|dụng cụ học tập|khóa học|course/i.test(fullText)) {\n      category = 'education';\n    } else if (/xem phim|cgv|bhd|lotte cinema|rạp|vé xem|netflix|spotify|youtube|steam|game|playstation|du lịch|khách sạn|resort|vé máy bay|karaoke|bowling|billiard/i.test(fullText)) {\n      category = 'entertainment';\n    } else if (/nội thất|điện máy|điện thoại|laptop|sửa nhà|decor|gia dụng|thuê nhà|tiền nhà/i.test(fullText)) {\n      category = 'house';\n    } else if (/chứng khoán|cổ phiếu|ssi|vps|tcbs|vndirect|tiết kiệm|gửi tiền|vàng|sjc|doji/i.test(fullText)) {\n      category = 'invest';\n    }\n  } else {\n    if (/lương|salary|payroll|thu nhập|thưởng|bonus/i.test(fullText)) {\n      category = 'salary';\n    } else if (/đầu tư|cổ tức|lãi|tiết kiệm|interest/i.test(fullText)) {\n      category = 'investment';\n    } else {\n      category = 'other_income';\n    }\n  }\n\n  // 4. Clean note - Extract specific merchant / ND field if present\n  let cleanNote = '';\n  const ndMatch = rawText.match(/(?:ND|Noi dung|Nội dung|GD tại|tại|Ref|Desc)[\\:\\s]+([^.]+?)(?:\\s*(?:vao luc|vào lúc|ngay|ngày|luc|lúc|Han muc|Hạn mức|SD|Số dư|\\.|$))/i);\n  if (ndMatch && ndMatch[1]) {\n    cleanNote = ndMatch[1].trim();\n  } else {\n    cleanNote = rawText\n      .replace(/(?:Số tiền|Số tiền GD|So tien|Giá trị GD|Số tiền giao dịch|Số dư thay đổi|PS|GD)[\\:\\s]*[\\+\\-]?\\s*[\\d\\.\\,]{3,15}\\s*(?:vnd|vnđ|đ|d\\b)/gi, '')\n      .replace(/(\\d+(?:[\\.,]\\d+)?)\\s*(?:k|nghìn|nghin|ng|cành|canh)\\b/gi, '')\n      .replace(/(\\d+(?:[\\.,]\\d+)?)\\s*(?:tr|triệu|trieu|m)\\b/gi, '')\n      .replace(/\\b\\d{4,12}\\b/g, '')\n      .replace(/\\r?\\n|\\r/g, ' ')\n      .replace(/\\s+/g, ' ')\n      .trim();\n  }\n\n  if (!cleanNote || cleanNote.length < 2) {\n    cleanNote = rawText.slice(0, 100);\n  }\n\n  return {\n    amount: amount,\n    type: type,\n    category: category,\n    note: cleanNote\n  };\n}\n\n// ==================== GMAIL CLOUD AUTO-SCAN ====================\nfunction scanBankEmails(targetMember) {\n  const member = targetMember || 'dad';\n  const ss = SpreadsheetApp.getActiveSpreadsheet();\n  let pSheet = ss.getSheetByName('PendingTransactions');\n  if (!pSheet) {\n    setupSheet();\n    pSheet = ss.getSheetByName('PendingTransactions');\n  }\n\n  let label = GmailApp.getUserLabelByName('CashFlow_Processed');\n  if (!label) {\n    label = GmailApp.createLabel('CashFlow_Processed');\n  }\n\n  const queries = [\n    'from:(vpbank.com.vn OR techcombank.com.vn OR mbbank.com.vn OR vietcombank.com.vn OR timo.vn OR acb.com.vn OR vib.com.vn OR tpbank.com.vn OR bidv.com.vn OR cake.vn) -label:CashFlow_Processed newer_than:3d',\n    'subject:(\"Biến động số dư\" OR \"Thông báo giao dịch\" OR \"Transaction Alert\" OR \"Thông báo thay đổi số dư\") -label:CashFlow_Processed newer_than:3d'\n  ];\n\n  let addedCount = 0;\n  const processedThreadIds = {};\n\n  for (let q = 0; q < queries.length; q++) {\n    const threads = GmailApp.search(queries[q], 0, 15);\n    for (let i = 0; i < threads.length; i++) {\n      const thread = threads[i];\n      if (processedThreadIds[thread.getId()]) continue;\n      processedThreadIds[thread.getId()] = true;\n\n      const messages = thread.getMessages();\n      for (let j = 0; j < messages.length; j++) {\n        const msg = messages[j];\n        const subject = msg.getSubject() || '';\n        const sender = msg.getFrom() || '';\n        const bodyText = msg.getPlainBody() || '';\n        const date = msg.getDate();\n\n        let bank = 'Ngân hàng';\n        if (/vpbank/i.test(sender) || /vpbank/i.test(subject) || /vpbank/i.test(bodyText)) bank = 'VPBank';\n        else if (/techcombank/i.test(sender) || /techcombank/i.test(subject)) bank = 'Techcombank';\n        else if (/mbbank|mb bank/i.test(sender) || /mbbank|mb bank/i.test(subject)) bank = 'MB Bank';\n        else if (/vietcombank|vcb/i.test(sender) || /vietcombank/i.test(subject)) bank = 'Vietcombank';\n        else if (/timo/i.test(sender) || /timo/i.test(subject)) bank = 'Timo';\n        else if (/acb/i.test(sender) || /acb/i.test(subject)) bank = 'ACB';\n        else if (/vib/i.test(sender) || /vib/i.test(subject)) bank = 'VIB';\n        else if (/tpbank/i.test(sender) || /tpbank/i.test(subject)) bank = 'TPBank';\n        else if (/bidv/i.test(sender) || /bidv/i.test(subject)) bank = 'BIDV';\n        else if (/cake/i.test(sender) || /cake/i.test(subject)) bank = 'CAKE';\n        else if (/momo/i.test(sender) || /momo/i.test(subject)) bank = 'MoMo';\n\n        const classified = classifyBankNotification(bodyText, subject, bank);\n        if (classified.amount > 0) {\n          const id = 'email_' + new Date().getTime() + '_' + Math.floor(Math.random() * 1000);\n          const dateStr = date ? date.toISOString() : new Date().toISOString();\n          pSheet.appendRow([\n            id,\n            bank,\n            classified.type,\n            classified.amount,\n            classified.note || subject,\n            classified.category,\n            member,\n            dateStr,\n            'pending',\n            dateStr\n          ]);\n          addedCount++;\n        }\n      }\n      thread.addLabel(label);\n    }\n  }\n\n  return { success: true, addedCount: addedCount };\n}\n\nfunction scanMemberBankEmails(memberId) {\n  return scanBankEmails(memberId || 'mom');\n}\n\n// Trigger functions for each member role\nfunction triggerScanMom() { return scanBankEmails('mom'); }\nfunction triggerScanDad() { return scanBankEmails('dad'); }\nfunction triggerScanChild() { return scanBankEmails('child'); }\nfunction triggerScanOther() { return scanBankEmails('other'); }\n\n// Setup auto-trigger for a specific member\nfunction setupMemberTrigger(memberId) {\n  const funcName = 'triggerScan' + memberId.charAt(0).toUpperCase() + memberId.slice(1);\n  // Remove existing trigger for this member\n  const triggers = ScriptApp.getProjectTriggers();\n  for (let i = 0; i < triggers.length; i++) {\n    if (triggers[i].getHandlerFunction() === funcName) {\n      ScriptApp.deleteTrigger(triggers[i]);\n    }\n  }\n  // Create new trigger every 5 minutes\n  ScriptApp.newTrigger(funcName)\n    .timeBased()\n    .everyMinutes(5)\n    .create();\n  return 'Đã thiết lập tự động quét mỗi 5 phút cho ' + memberId;\n}\n\n// Bật tự động chạy mỗi 1 phút trên Cloud Google (cho chủ tài khoản)\nfunction setupGmailTrigger() {\n  const triggers = ScriptApp.getProjectTriggers();\n  for (let i = 0; i < triggers.length; i++) {\n    if (triggers[i].getHandlerFunction() === 'scanBankEmails') {\n      ScriptApp.deleteTrigger(triggers[i]);\n    }\n  }\n  ScriptApp.newTrigger('scanBankEmails')\n    .timeBased()\n    .everyMinutes(1)\n    .create();\n  return \"Đã thiết lập tự động quét Gmail mỗi 1 phút thành công!\";\n}\n\n// ==================== MEMBER AUTH & SCAN PORTAL HTML ====================\nfunction renderMemberPortalHtml(memberId) {\n  const label = memberId === 'mom' ? 'Vợ 🌸' : (memberId === 'dad' ? 'Chồng 👔' : (memberId === 'child' ? 'Con 🧒' : 'Thành viên gia đình'));\n  const html = `<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <title>CashFlow - Kích hoạt Quét Email</title>\n  <style>\n    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 16px; box-sizing: border-box; }\n    .card { background: #1e293b; border: 1px solid #334155; border-radius: 20px; padding: 28px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }\n    .emoji { font-size: 3rem; margin-bottom: 12px; }\n    h1 { font-size: 1.3rem; margin: 0 0 8px 0; color: #f8fafc; }\n    p { font-size: 0.85rem; color: #94a3b8; line-height: 1.5; margin: 0 0 20px 0; }\n    .btn { background: #e77d3e; color: #fff; border: none; border-radius: 12px; padding: 14px 24px; font-size: 1rem; font-weight: 700; cursor: pointer; width: 100%; transition: 0.2s; box-shadow: 0 4px 14px rgba(231, 125, 62, 0.4); }\n    .btn:hover { background: #d97706; transform: translateY(-1px); }\n    .btn:disabled { opacity: 0.6; cursor: not-allowed; }\n    .status { margin-top: 18px; padding: 14px; border-radius: 10px; font-size: 0.85rem; display: none; line-height: 1.5; }\n    .status.success { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }\n    .status.loading { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }\n    .status.error { background: rgba(248, 113, 113, 0.15); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.3); }\n    .steps { text-align: left; margin-top: 14px; font-size: 0.8rem; color: #94a3b8; line-height: 1.6; }\n    .steps .done { color: #4ade80; }\n    .steps .active { color: #60a5fa; font-weight: 600; }\n  </style>\n</head>\n<body>\n  <div class=\"card\">\n    <div class=\"emoji\">🌸</div>\n    <h1>Kích hoạt Quét Email Ngân Hàng</h1>\n    <p>Xin chào <strong>${label}</strong>!<br>Bấm nút bên dưới để cho phép hệ thống đọc email biến động ngân hàng của bạn và đưa vào sổ chi tiêu gia đình.<br><em style=\"font-size:0.78rem;\">Hệ thống chỉ đọc email từ ngân hàng, không đọc email cá nhân khác.</em></p>\n    \n    <button class=\"btn\" id=\"scanBtn\" onclick=\"startActivation()\">🚀 Kích hoạt & Quét Email Ngân Hàng</button>\n    \n    <div id=\"statusBox\" class=\"status\"></div>\n    \n    <div id=\"stepsBox\" class=\"steps\" style=\"display:none;\">\n      <div id=\"step1\">⬜ Bước 1: Cấp quyền đọc Gmail...</div>\n      <div id=\"step2\">⬜ Bước 2: Quét email ngân hàng...</div>\n      <div id=\"step3\">⬜ Bước 3: Thiết lập quét tự động 24/7...</div>\n    </div>\n  </div>\n\n  <script>\n    function startActivation() {\n      var btn = document.getElementById('scanBtn');\n      var box = document.getElementById('statusBox');\n      var steps = document.getElementById('stepsBox');\n      btn.disabled = true;\n      btn.textContent = 'Đang kích hoạt... ⏳';\n      steps.style.display = 'block';\n      \n      // Step 1: Permission (implicit when calling GmailApp)\n      document.getElementById('step1').innerHTML = '🔄 Bước 1: Đang xin cấp quyền đọc Gmail...';\n      document.getElementById('step1').className = 'active';\n      box.style.display = 'block';\n      box.className = 'status loading';\n      box.textContent = 'Đang kết nối với Gmail của bạn...';\n      \n      // Step 2: Scan emails\n      google.script.run\n        .withSuccessHandler(function(scanRes) {\n          document.getElementById('step1').innerHTML = '✅ Bước 1: Đã cấp quyền đọc Gmail';\n          document.getElementById('step1').className = 'done';\n          document.getElementById('step2').innerHTML = '✅ Bước 2: Đã quét xong! Tìm thấy ' + (scanRes.addedCount || 0) + ' giao dịch mới';\n          document.getElementById('step2').className = 'done';\n          document.getElementById('step3').innerHTML = '🔄 Bước 3: Đang thiết lập quét tự động...';\n          document.getElementById('step3').className = 'active';\n          box.textContent = 'Đang thiết lập chế độ quét tự động 24/7...';\n          \n          // Step 3: Setup auto-trigger\n          google.script.run\n            .withSuccessHandler(function(triggerRes) {\n              document.getElementById('step3').innerHTML = '✅ Bước 3: Đã thiết lập quét tự động 24/7!';\n              document.getElementById('step3').className = 'done';\n              btn.disabled = false;\n              btn.textContent = '🔄 Quét lại ngay';\n              box.className = 'status success';\n              box.innerHTML = '🎉 <strong>Hoàn tất!</strong><br>Đã thêm ' + (scanRes.addedCount || 0) + ' giao dịch mới.<br>Hệ thống sẽ tự động quét email ngân hàng của bạn mỗi 5 phút.<br><br><strong>Bạn có thể đóng trang này.</strong> Mọi thứ đã được thiết lập xong!';\n            })\n            .withFailureHandler(function(err) {\n              document.getElementById('step3').innerHTML = '⚠️ Bước 3: Không thể tự động hóa (bạn có thể quét thủ công)';\n              btn.disabled = false;\n              btn.textContent = '🔄 Quét lại ngay';\n              box.className = 'status success';\n              box.innerHTML = '🎉 Đã quét xong ' + (scanRes.addedCount || 0) + ' giao dịch!<br>Lưu ý: Quét tự động chưa kích hoạt. Bạn có thể bấm nút để quét thủ công.';\n            })\n            .setupMemberTrigger('${memberId}');\n        })\n        .withFailureHandler(function(err) {\n          document.getElementById('step1').innerHTML = '✅ Bước 1: Đã cấp quyền';\n          document.getElementById('step1').className = 'done';\n          document.getElementById('step2').innerHTML = '❌ Bước 2: Lỗi khi quét';\n          btn.disabled = false;\n          btn.textContent = '🔄 Thử lại';\n          box.className = 'status error';\n          box.textContent = 'Lỗi: ' + err.toString();\n        })\n        .scanMemberBankEmails('${memberId}');\n    }\n  </script>\n</body>\n</html>`;\n\n  return HtmlService.createHtmlOutput(html)\n    .setTitle('CashFlow - Kích hoạt Quét Email')\n    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);\n}\n";
 
 // ==================== MAIN APP ====================
+const APPS_SCRIPT_MEMBERS_V2 = `    // ==================== MEMBERS ====================
+    if (action === 'getMembers') {
+      const sheet = getSheet('Members');
+      if (!sheet) return responseJson({ success: true, data: [] }, cb);
+      const data = sheet.getDataRange().getValues();
+      const members = [];
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0]) {
+          members.push({
+            id: String(data[i][0]),
+            name: String(data[i][1] || ''),
+            avatar: String(data[i][2] || '👤'),
+            color: String(data[i][3] || '#e77d3e'),
+            avatarImg: String(data[i][4] || ''),
+            avatarId: String(data[i][5] || ''),
+            updatedAt: String(data[i][6] || '')
+          });
+        }
+      }
+      return responseJson({ success: true, data: members }, cb);
+    }
+
+    if (action === 'syncMembers') {
+      const members = safeParseJson(e.parameter.data) || [];
+      const sheet = getSheet('Members');
+      if (!sheet) return responseJson({ success: false, error: 'Sheet Members không tồn tại' }, cb);
+
+      const currentRows = sheet.getDataRange().getValues();
+      const currentById = {};
+      for (let i = 1; i < currentRows.length; i++) {
+        if (!currentRows[i][0]) continue;
+        currentById[String(currentRows[i][0])] = {
+          id: String(currentRows[i][0]),
+          name: String(currentRows[i][1] || ''),
+          avatar: String(currentRows[i][2] || '👤'),
+          color: String(currentRows[i][3] || '#e77d3e'),
+          avatarImg: String(currentRows[i][4] || ''),
+          avatarId: String(currentRows[i][5] || ''),
+          updatedAt: String(currentRows[i][6] || '')
+        };
+      }
+
+      const now = new Date().toISOString();
+      const resolved = members.map(incoming => {
+        const current = currentById[String(incoming.id || '')];
+        const incomingTime = Date.parse(incoming.updatedAt || '') || 0;
+        const currentTime = Date.parse(current && current.updatedAt || '') || 0;
+        if (current && currentTime > incomingTime) return current;
+        return { ...incoming, updatedAt: incoming.updatedAt || now };
+      });
+
+      const lastRow = sheet.getLastRow();
+      if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
+      if (resolved.length > 0) {
+        const rows = resolved.map(m => [
+          m.id || '', m.name || '', m.avatar || '', m.color || '',
+          m.avatarImg || '', m.avatarId || '', m.updatedAt || now
+        ]);
+        sheet.getRange(2, 1, rows.length, 7).setValues(rows);
+      }
+      return responseJson({ success: true, message: 'Đã đồng bộ thành viên', data: resolved }, cb);
+    }
+`;
+
+const APPS_SCRIPT_BANK_NOTIFICATION_V2 = `    // ==================== BANK NOTIFICATION WEBHOOK & PENDING INBOX ====================
+    if (action === 'bankNotification') {
+      const rawText = String(e.parameter.text || e.parameter.body || e.parameter.content || e.parameter.message || '').trim().slice(0, 5000);
+      const title = String(e.parameter.title || e.parameter.sender || '').trim().slice(0, 120);
+      const bank = String(e.parameter.bank || title || 'Ngân hàng').trim().slice(0, 80);
+      const member = String(e.parameter.member || 'family').trim().slice(0, 100);
+      const source = String(e.parameter.source || 'webhook').trim().slice(0, 40);
+      const isDirect = String(e.parameter.direct || e.parameter.auto || '') === '1' || String(e.parameter.direct || '') === 'true';
+
+      if (!rawText) {
+        return responseJson({ success: false, error: 'Thiếu nội dung thông báo' }, cb);
+      }
+
+      const classified = classifyBankNotification(rawText, title, bank);
+      if (!classified || Number(classified.amount || 0) <= 0) {
+        return responseJson({ success: false, error: 'Không nhận diện được số tiền giao dịch' }, cb);
+      }
+
+      const now = new Date();
+      const nowStr = now.toISOString();
+      const dayKey = Utilities.formatDate(now, Session.getScriptTimeZone() || 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd');
+      const fingerprintInput = [dayKey, member, rawText.toLowerCase().replace(/\\s+/g, ' ')].join('|');
+      const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, fingerprintInput, Utilities.Charset.UTF_8);
+      const fingerprint = digest.map(b => ('0' + ((b + 256) % 256).toString(16)).slice(-2)).join('').slice(0, 24);
+      const id = 'pend_' + fingerprint;
+      const pendingSheet = getSheet('PendingTransactions');
+      if (!pendingSheet) {
+        return responseJson({ success: false, error: 'Sheet PendingTransactions không tồn tại. Hãy chạy setupSheet().' }, cb);
+      }
+
+      if (findRowById(pendingSheet, id) > -1) {
+        return responseJson({ success: true, duplicate: true, message: 'Thông báo này đã được nhận trước đó' }, cb);
+      }
+
+      if (isDirect) {
+        const transSheet = getSheet('Transactions');
+        if (transSheet) {
+          transSheet.appendRow([
+            'trans_' + fingerprint,
+            classified.type,
+            classified.amount,
+            classified.category,
+            classified.note || 'Nhập nhanh từ Shortcut',
+            dayKey,
+            member,
+            nowStr,
+            'family'
+          ]);
+        }
+      }
+
+      pendingSheet.appendRow([
+        id,
+        bank,
+        classified.type,
+        classified.amount,
+        classified.note || rawText.slice(0, 250),
+        classified.category,
+        member,
+        nowStr,
+        isDirect ? 'approved' : 'pending',
+        nowStr
+      ]);
+
+      return responseJson({
+        success: true,
+        duplicate: false,
+        source: source,
+        message: isDirect ? 'Đã ghi nhận giao dịch' : 'Đã đưa vào hộp chờ',
+        transaction: {
+          id: id,
+          bank: bank,
+          type: classified.type,
+          amount: classified.amount,
+          note: classified.note,
+          category: classified.category,
+          memberId: member,
+          date: nowStr,
+          status: isDirect ? 'approved' : 'pending'
+        }
+      }, cb);
+    }
+
+`;
+
+function getAppsScriptCode() {
+  const upgradedSetup = APPS_SCRIPT_CODE.replace(
+    `  if (!memberSheet) {
+    memberSheet = ss.insertSheet('Members');
+    memberSheet.appendRow(['ID', 'Tên', 'Avatar', 'Màu', 'AvatarImg', 'AvatarId']);
+    memberSheet.setFrozenRows(1);
+    memberSheet.getRange('A1:F1').setFontWeight('bold');
+  }`,
+    `  if (!memberSheet) {
+    memberSheet = ss.insertSheet('Members');
+    memberSheet.appendRow(['ID', 'Tên', 'Avatar', 'Màu', 'AvatarImg', 'AvatarId', 'UpdatedAt']);
+    memberSheet.setFrozenRows(1);
+    memberSheet.getRange('A1:G1').setFontWeight('bold');
+  } else if (memberSheet.getRange('G1').getValue() !== 'UpdatedAt') {
+    memberSheet.getRange('G1').setValue('UpdatedAt').setFontWeight('bold');
+  }`
+  );
+
+  const withMemberSync = upgradedSetup.replace(
+    /    \/\/ ==================== MEMBERS ====================[\s\S]*?(?=    \/\/ ==================== BUDGETS ====================)/,
+    APPS_SCRIPT_MEMBERS_V2
+  );
+
+  return withMemberSync.replace(
+    /    \/\/ ==================== BANK NOTIFICATION WEBHOOK & PENDING INBOX ====================[\s\S]*?(?=    if \(action === 'getPending'\))/,
+    APPS_SCRIPT_BANK_NOTIFICATION_V2
+  );
+}
+
 const App = {
   currentPage: 'dashboard',
   currentMonth: getCurrentMonth(),
@@ -27,7 +205,7 @@ const App = {
     this.initSyncStatus();
     // Populate hidden script textarea
     const codeEl = document.getElementById('appsScriptCode');
-    if (codeEl) codeEl.value = APPS_SCRIPT_CODE;
+    if (codeEl) codeEl.value = getAppsScriptCode();
     // Check if setup is done
     if (!Storage.isSetupDone()) {
       // If members already exist (setup flag lost), auto-recover
@@ -788,6 +966,74 @@ const App = {
     this.renderMemberEmailList();
     this.renderMemberManagement();
     this.renderReminderSettings();
+    this.renderIosShortcutSetup();
+  },
+
+  renderIosShortcutSetup() {
+    const memberSelect = document.getElementById('iosMemberSelect');
+    if (!memberSelect) return;
+
+    const previousValue = memberSelect.value;
+    const members = Storage.getMembers();
+    memberSelect.innerHTML = '';
+    if (members.length === 0) {
+      const option = document.createElement('option');
+      option.value = 'family';
+      option.textContent = 'Cả nhà';
+      memberSelect.appendChild(option);
+    } else {
+      members.forEach(member => {
+        const option = document.createElement('option');
+        option.value = member.id;
+        option.textContent = member.name || 'Thành viên';
+        memberSelect.appendChild(option);
+      });
+    }
+    if ([...memberSelect.options].some(option => option.value === previousValue)) {
+      memberSelect.value = previousValue;
+    }
+    this.updateIosShortcutPreview();
+  },
+
+  getIosShortcutConfig() {
+    return {
+      url: Storage.getApiUrl(),
+      action: 'bankNotification',
+      text: '[Chọn biến Nội dung tin nhắn / Shortcut Input]',
+      bank: document.getElementById('iosBankSelect')?.value || 'Ngân hàng',
+      member: document.getElementById('iosMemberSelect')?.value || 'family',
+      source: 'ios-shortcuts'
+    };
+  },
+
+  updateIosShortcutPreview() {
+    const preview = document.getElementById('iosShortcutConfig');
+    if (!preview) return;
+    const config = this.getIosShortcutConfig();
+    preview.style.whiteSpace = 'pre-wrap';
+    preview.textContent = config.url
+      ? `URL: ${config.url}\nMethod: POST · Body: JSON\naction: ${config.action}\ntext: ${config.text}\nbank: ${config.bank}\nmember: ${config.member}\nsource: ${config.source}`
+      : 'Hãy kết nối Google Sheets trước để tạo thông số Shortcuts.';
+  },
+
+  copyIosShortcutConfig() {
+    const config = this.getIosShortcutConfig();
+    if (!config.url) {
+      this.showToast('Vui lòng kết nối Google Sheets trước', 'error');
+      return;
+    }
+    const text = `CashFlow iOS Shortcuts\nURL: ${config.url}\nMethod: POST\nRequest Body: JSON\naction = ${config.action}\ntext = ${config.text}\nbank = ${config.bank}\nmember = ${config.member}\nsource = ${config.source}`;
+    navigator.clipboard.writeText(text).then(() => {
+      this.showToast('Đã sao chép thông số iPhone Shortcuts! 📋');
+    }).catch(() => {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      textarea.remove();
+      this.showToast('Đã sao chép thông số iPhone Shortcuts! 📋');
+    });
   },
 
   renderMemberEmailList() {
@@ -910,15 +1156,28 @@ const App = {
 
     this.openAvatarModal({
       currentImg: currentImg,
-      onSelect: (selected) => {
+      onSelect: async (selected) => {
         Storage.updateMember(memberId, {
           avatarId: selected.id || 'custom',
           avatarImg: selected.img,
           avatar: selected.emoji || '👤'
-        });
+        }, { sync: false });
         this.renderMemberManagement();
         this.renderFamilyAvatars();
-        this.showToast('Đã đổi avatar thành công! ✅');
+        if (!Storage.isOnline()) {
+          this.showToast('Đã lưu avatar trên máy này. Kết nối Google Sheets để đồng bộ.', 'warning');
+          return;
+        }
+        this.showToast('Đang đồng bộ avatar...');
+        try {
+          await Storage.syncMembersToSheets();
+          this.renderMemberManagement();
+          this.renderFamilyAvatars();
+          this.showToast('Đã đổi và đồng bộ avatar! ✅');
+        } catch (error) {
+          console.warn('Avatar sync failed:', error);
+          this.showToast('Avatar đã lưu trên máy này nhưng chưa đồng bộ được.', 'error');
+        }
       }
     });
   },
@@ -1195,7 +1454,7 @@ const App = {
     catch(e) { this.showToast('Lỗi: '+e.message,'error'); }
   },
   handleCopyScript() {
-    const code = APPS_SCRIPT_CODE;
+    const code = getAppsScriptCode();
     navigator.clipboard.writeText(code).then(() => this.showToast('Đã copy! 📋')).catch(() => {
       const ta = document.createElement('textarea'); ta.value = code; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); this.showToast('Đã copy! 📋');
     });
@@ -2363,10 +2622,13 @@ const App = {
   // ==================== QUICK BANK ENTRY ====================
   _quickEntryType: 'expense',
   _quickEntryCat: 'food',
+  _quickEntryBeneficiaryId: 'family',
 
   openQuickEntry() {
     const modal = document.getElementById('quickEntryModal');
     if (modal) {
+      this._quickEntryBeneficiaryId = 'family';
+      this.renderQuickBeneficiarySelector();
       modal.classList.add('active');
       document.body.style.overflow = 'hidden';
       setTimeout(() => { document.getElementById('quickAmount')?.focus(); }, 200);
@@ -2380,7 +2642,31 @@ const App = {
       document.body.style.overflow = '';
       document.getElementById('quickAmount').value = '';
       document.getElementById('quickNote').value = '';
+      this._quickEntryBeneficiaryId = 'family';
     }
+  },
+
+  renderQuickBeneficiarySelector() {
+    const container = document.getElementById('quickBeneficiarySelector');
+    if (!container) return;
+    const members = Storage.getMembers();
+    const isFamily = !this._quickEntryBeneficiaryId || this._quickEntryBeneficiaryId === 'family';
+    const familyButton = `
+      <button type="button" class="beneficiary-btn quick-beneficiary-btn ${isFamily ? 'active' : ''}" data-id="family">
+        <span>👨‍👩‍👧‍👦 Cả nhà</span>
+      </button>
+    `;
+    const memberButtons = members.map(member => {
+      const imgSrc = member.avatarImg || (AVATARS.find(avatar => avatar.id === member.avatarId) || AVATARS[0]).img;
+      const isActive = this._quickEntryBeneficiaryId === member.id;
+      return `
+        <button type="button" class="beneficiary-btn quick-beneficiary-btn ${isActive ? 'active' : ''}" data-id="${member.id}" style="--member-color:${member.color}">
+          <img src="${imgSrc}" alt="${member.name}" class="avatar-img-sm" style="width:16px;height:16px;border-radius:50%;">
+          <span>${member.name}</span>
+        </button>
+      `;
+    }).join('');
+    container.innerHTML = familyButton + memberButtons;
   },
 
   submitQuickEntry() {
@@ -2398,28 +2684,22 @@ const App = {
     const type = typeBtn?.dataset?.qtype || 'expense';
     const category = catChip?.dataset?.qcat || 'other_expense';
     const note = noteInput?.value || '';
+    const members = Storage.getMembers();
 
     const transaction = {
-      id: 'quick_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
       type,
       amount,
       category,
       note: note || `Nhập nhanh từ thông báo`,
       date: new Date().toISOString().slice(0, 10),
-      memberId: Storage.getAllMembers()[0]?.id || 'dad',
-      createdAt: new Date().toISOString(),
-      beneficiaryId: ''
+      memberId: members[0]?.id || 'dad',
+      beneficiaryId: this._quickEntryBeneficiaryId || 'family'
     };
 
-    Storage.addTransaction(transaction);
+    Storage.add(transaction);
     this.closeQuickEntry();
     this.showToast(`✅ Đã ghi nhận ${type === 'income' ? 'thu' : 'chi'} ${formatCurrency(amount)}!`);
     this.renderCurrentPage();
-
-    // Also sync to Google Sheets if online
-    if (Storage.isOnline()) {
-      Storage._sheetApiCall('add', { data: JSON.stringify(transaction) }).catch(() => {});
-    }
   },
 
   _simulateLocalBankNotification(sample) {
@@ -2673,6 +2953,9 @@ const App = {
         });
       }
     });
+    document.getElementById('iosBankSelect')?.addEventListener('change', () => this.updateIosShortcutPreview());
+    document.getElementById('iosMemberSelect')?.addEventListener('change', () => this.updateIosShortcutPreview());
+    document.getElementById('copyIosConfigBtn')?.addEventListener('click', () => this.copyIosShortcutConfig());
 
     document.getElementById('activateMemberEmailBtn')?.addEventListener('click', () => {
       const emailInput = document.getElementById('memberEmailInput');
@@ -2719,6 +3002,13 @@ const App = {
     document.getElementById('quickEntryBtn')?.addEventListener('click', () => this.openQuickEntry());
     document.getElementById('quickEntryClose')?.addEventListener('click', () => this.closeQuickEntry());
     document.getElementById('quickEntryModal')?.addEventListener('click', (e) => { if (e.target.id === 'quickEntryModal') this.closeQuickEntry(); });
+    document.getElementById('quickBeneficiarySelector')?.addEventListener('click', (e) => {
+      const button = e.target.closest('.quick-beneficiary-btn');
+      if (button) {
+        this._quickEntryBeneficiaryId = button.dataset.id;
+        this.renderQuickBeneficiarySelector();
+      }
+    });
     document.querySelectorAll('.quick-type-btn').forEach(b => b.addEventListener('click', () => {
       document.querySelectorAll('.quick-type-btn').forEach(x => { x.classList.remove('active'); x.style.borderColor = 'var(--border)'; x.style.background = 'transparent'; x.style.color = 'var(--text-secondary)'; });
       b.classList.add('active'); b.style.borderColor = 'var(--primary)'; b.style.background = 'rgba(231,125,62,0.15)'; b.style.color = 'var(--primary)';

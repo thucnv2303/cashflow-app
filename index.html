@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icon-512.png">
   <link rel="icon" href="icon-512.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=3.20">
+  <link rel="stylesheet" href="css/style.css?v=3.21">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -553,49 +553,48 @@
         </details>
 
         <details class="settings-card">
-          <summary class="settings-card-header"><div class="settings-card-info"><span class="settings-card-icon">🏦</span><div><strong>Ngân hàng tự động</strong><small>Webhook, Gmail, Shortcut, Siri</small></div></div><span class="settings-card-arrow">▶</span></summary>
+          <summary class="settings-card-header"><div class="settings-card-info"><span class="settings-card-icon">🏦</span><div><strong>Ngân hàng tự động</strong><small>iPhone Shortcuts, SMS Banking, Gmail</small></div></div><span class="settings-card-arrow">▶</span></summary>
           <div class="settings-card-body">
             <div class="form-group"><label>Link Webhook:</label><div style="display:flex;gap:8px;"><input type="text" id="webhookUrlInput" class="filter-input" readonly style="flex:1;font-size:0.78rem;background:var(--surface-hover);"><button type="button" class="btn-ghost" id="copyWebhookBtn">📋</button></div></div>
             <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
               <button type="button" class="btn-primary" id="scanGmailBtn" style="font-size:0.8rem;padding:6px 12px;background:#1a73e8;">📧 Quét Gmail</button>
               <button type="button" class="btn-ghost" id="testWebhookBtn" style="font-size:0.8rem;padding:6px 12px;">🧪 Thử gửi</button>
             </div>
+
+            <div style="margin-top:14px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--surface-hover);">
+              <div style="font-weight:700;font-size:0.86rem;margin-bottom:4px;">📱 Cấu hình iPhone Shortcuts</div>
+              <p style="font-size:0.74rem;color:var(--text-secondary);line-height:1.45;margin:0 0 10px;">Tự động nhận <strong>SMS Banking</strong> và đưa vào hộp chờ. iOS không cho phép đọc trực tiếp thông báo từ app ngân hàng.</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div><label style="font-size:0.72rem;">Ngân hàng</label><select id="iosBankSelect" class="filter-input" style="width:100%;font-size:0.78rem;"><option value="Ngân hàng">Tự nhận diện</option><option value="Techcombank">Techcombank</option><option value="Vietcombank">Vietcombank</option><option value="MB Bank">MB Bank</option><option value="VPBank">VPBank</option><option value="ACB">ACB</option><option value="VIB">VIB</option><option value="TPBank">TPBank</option><option value="BIDV">BIDV</option><option value="Timo">Timo</option><option value="CAKE">CAKE</option></select></div>
+                <div><label style="font-size:0.72rem;">Giao dịch của</label><select id="iosMemberSelect" class="filter-input" style="width:100%;font-size:0.78rem;"></select></div>
+              </div>
+              <div id="iosShortcutConfig" style="font-size:0.72rem;line-height:1.55;margin-top:10px;padding:9px;border-radius:9px;background:var(--surface);border:1px dashed var(--border);word-break:break-word;"></div>
+              <button type="button" class="btn-primary" id="copyIosConfigBtn" style="width:100%;font-size:0.78rem;padding:8px 10px;margin-top:8px;">📋 Sao chép thông số Shortcuts</button>
+            </div>
+
             <details class="accordion-guide" style="margin-top:12px;">
-              <summary class="accordion-header"><div class="guide-summary-left"><span class="guide-icon">📖</span><div><strong style="font-size:0.82rem;">Hướng dẫn cài đặt tự động (4 cách)</strong></div></div><span class="accordion-arrow">▼</span></summary>
+              <summary class="accordion-header"><div class="guide-summary-left"><span class="guide-icon">📖</span><div><strong style="font-size:0.82rem;">Cài tự động SMS trên iPhone</strong></div></div><span class="accordion-arrow">▼</span></summary>
               <div class="setup-guide" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;font-size:0.76rem;">
                 <div style="margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);">
-                  <p style="font-weight:700;margin-bottom:4px;color:var(--primary);">💬 Cách 1: Tự động qua SMS Banking (iPhone) — Tự động 100% ⭐</p>
+                  <p style="font-weight:700;margin-bottom:4px;color:var(--primary);">💬 SMS Banking → Hộp chờ CashFlow</p>
                   <ol style="padding-left:18px;line-height:1.5;">
                     <li>Mở <strong>Phím tắt (Shortcuts)</strong> → Tab <strong>Tự động hóa (Automation)</strong> → Bấm <strong>+</strong></li>
-                    <li>Chọn <strong>Tin nhắn (Message)</strong> → Người gửi: <em>VPBank, Techcombank, MB...</em> (hoặc chứa: <em>VND</em>)</li>
-                    <li>Tích chọn <strong>Chạy ngay lập tức (Run Immediately)</strong> & Tắt "Thông báo khi chạy"</li>
-                    <li>Thêm tác vụ: <strong>Lấy nội dung của URL (Get Contents of URL)</strong></li>
-                    <li>Dán URL: <code>Webhook_URL?action=bankNotification&amp;member=dad&amp;text=[Nội dung tin nhắn]</code></li>
-                    <li>🎉 Xong! SMS về máy sẽ tự động chuyển vào <strong>Hộp thư chờ phân bổ</strong> trên App!</li>
+                    <li>Chọn <strong>Tin nhắn (Message)</strong> → chọn đúng người gửi ngân hàng hoặc điều kiện chứa <em>VND</em></li>
+                    <li>Chọn <strong>Chạy ngay lập tức (Run Immediately)</strong>. Không dùng chế độ hỏi trước khi chạy.</li>
+                    <li>Thêm <strong>Lấy nội dung của URL (Get Contents of URL)</strong> → dán URL ở khung thông số phía trên.</li>
+                    <li>Mở <strong>Hiển thêm</strong> → Method: <strong>POST</strong> → Request Body: <strong>JSON</strong>.</li>
+                    <li>Tạo 5 trường theo khung đã sao chép. Riêng <code>text</code>, chọn biến <strong>Nội dung tin nhắn / Shortcut Input</strong>, không gõ chữ cố định.</li>
+                    <li>Gửi thử một SMS mẫu. Giao dịch hợp lệ sẽ xuất hiện trong <strong>Hộp chờ phân bổ</strong>.</li>
                   </ol>
                 </div>
                 <div style="margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);">
-                  <p style="font-weight:700;margin-bottom:4px;">⚡ Cách 2: Gõ mặt lưng 2 lần (Back Tap) / Nhập nhanh tiếng Việt</p>
-                  <ol style="padding-left:18px;line-height:1.5;">
-                    <li>Phím tắt → Tạo phím tắt mới → Tác vụ 1: <strong>Yêu cầu đầu vào</strong> (Nhập chi tiêu: 50k cafe, 200k xang)</li>
-                    <li>Tác vụ 2: <strong>Lấy nội dung của URL</strong> → Webhook + <code>?action=bankNotification&amp;member=dad&amp;direct=1&amp;text=[Đầu vào]</code></li>
-                    <li>Cài đặt iPhone → Trợ năng → Cảm ứng → Chạm mặt lưng 2 lần → Gắn phím tắt này.</li>
-                  </ol>
-                </div>
-                <div style="margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);">
-                  <p style="font-weight:700;margin-bottom:4px;">☁️ Cách 3: Quét Gmail biến động số dư (24/7)</p>
+                  <p style="font-weight:700;margin-bottom:4px;">☁️ Phương án dự phòng: Gmail</p>
                   <ol style="padding-left:18px;line-height:1.5;">
                     <li>Apps Script → Chọn hàm <strong>setupGmailTrigger</strong> → ▶️ Run</li>
                     <li>Cấp quyền → Hệ thống tự quét Gmail mỗi 1 phút 24/7.</li>
                   </ol>
                 </div>
-                <div>
-                  <p style="font-weight:700;margin-bottom:4px;">🗣️ Cách 4: "Hey Siri, ghi chi tiêu"</p>
-                  <ol style="padding-left:18px;line-height:1.5;">
-                    <li>Phím tắt → Đặt tên "Ghi chi tiêu" → Yêu cầu đầu vào + Lấy nội dung URL</li>
-                    <li>Nói "Hey Siri, ghi chi tiêu 50k cafe" → Ghi nhận ngay!</li>
-                  </ol>
-                </div>
+                <p style="margin:0;color:var(--text-secondary);">⚠️ Không thể tự động đọc banner/push notification của app ngân hàng trên iOS. Hãy bật SMS Banking hoặc email biến động.</p>
               </div>
             </details>
           </div>
@@ -661,11 +660,19 @@
               style="font-size: 2rem; font-weight: 700; text-align: center; width: 100%; padding: 14px; border: 2px solid var(--primary); border-radius: 14px; background: var(--surface); color: var(--text-primary); outline: none;">
           </div>
 
-          <!-- Chi cho gì? - PROMINENT -->
+          <!-- Note -->
           <div style="margin-bottom: 14px;">
-            <label style="font-size: 0.88rem; font-weight: 700; color: var(--text-primary); display: block; margin-bottom: 6px;">💬 Chi cho gì?</label>
+            <label for="quickNote" style="font-size: 0.88rem; font-weight: 700; color: var(--text-primary); display: block; margin-bottom: 6px;">💬 Ghi chú</label>
             <input type="text" id="quickNote" placeholder="VD: cà phê, xăng, siêu thị, grab, tiền điện..." class="filter-input" 
               style="width: 100%; font-size: 0.92rem; padding: 12px; border: 2px solid var(--border); border-radius: 10px;">
+          </div>
+
+          <!-- Beneficiary -->
+          <div style="margin-bottom: 14px;">
+            <label style="font-size: 0.76rem; color: var(--text-secondary); display: block; margin-bottom: 6px;">👥 Chi cho ai?</label>
+            <div class="beneficiary-selector quick-beneficiary-selector" id="quickBeneficiarySelector">
+              <!-- JS renders family + member buttons -->
+            </div>
           </div>
 
           <!-- Transaction Type -->
@@ -1069,9 +1076,9 @@
 
   <!-- Scripts -->
   <script src="js/utils.js?v=3.20"></script>
-  <script src="js/storage.js?v=3.20"></script>
+  <script src="js/storage.js?v=3.24"></script>
   <script src="js/charts.js?v=3.20"></script>
-  <script src="js/app.js?v=3.22"></script>
+  <script src="js/app.js?v=3.25"></script>
 
 
 </body>
