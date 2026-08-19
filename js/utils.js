@@ -176,13 +176,54 @@ function formatCurrency(amount) {
   }).format(amount);
 }
 
+// Parse dates from local inputs, ISO strings and Google Sheets Date values.
+function parseDateValue(value) {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  const raw = String(value ?? '').trim();
+  if (!raw) return null;
+
+  let match = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s]|$)/);
+  if (match) {
+    const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    if (date.getFullYear() === Number(match[1])
+      && date.getMonth() === Number(match[2]) - 1
+      && date.getDate() === Number(match[3])) return date;
+    return null;
+  }
+
+  match = raw.match(/^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4})(?:\s|$)/);
+  if (match) {
+    const date = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]));
+    if (date.getFullYear() === Number(match[3])
+      && date.getMonth() === Number(match[2]) - 1
+      && date.getDate() === Number(match[1])) return date;
+    return null;
+  }
+
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 // Format date to Vietnamese format (DD/MM/YYYY)
-function formatDate(dateStr) {
-  const date = new Date(dateStr);
+function formatDate(value) {
+  const date = parseDateValue(value);
+  if (!date) return '—';
   const day = date.getDate().toString().padStart(2, '0');
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const year = date.getFullYear();
   return `${day}/${month}/${year}`;
+}
+
+// Compact date for the mobile transaction table (DD/MM)
+function formatShortDate(value) {
+  const date = parseDateValue(value);
+  if (!date) return '—';
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  return `${day}/${month}`;
 }
 
 // Format month label: "Tháng 8, 2026"
