@@ -3,7 +3,7 @@
   "short_name": "CashFlow",
   "description": "Quản lý chi tiêu gia đình thông minh",
   "id": "/cashflow-app/",
-  "start_url": "/cashflow-app/?app=3.33",
+  "start_url": "/cashflow-app/?app=3.34",
   "display": "standalone",
   "background_color": "#1a1a2e",
   "theme_color": "#e77d3e",

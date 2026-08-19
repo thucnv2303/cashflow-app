@@ -1376,7 +1376,7 @@ const App = {
     if ('serviceWorker' in navigator) {
       try {
         const hadController = Boolean(navigator.serviceWorker.controller);
-        const registration = await navigator.serviceWorker.register('./sw.js?v=3.33', {
+        const registration = await navigator.serviceWorker.register('./sw.js?v=3.34', {
           updateViaCache: 'none'
         });
 
@@ -2965,20 +2965,28 @@ const App = {
     const noteMobile = t.note ? `<div class="tx-note-mobile">${t.note}</div>` : '';
     const dateFormatted = formatDate(t.date);
     const dateShort = formatShortDate(t.date);
+    const amountText = `${t.type==='income'?'+':'-'}${formatCurrency(t.amount)}`;
+    const actionButtons = `<div class="action-btns"><button class="edit-btn" data-id="${t.id}" aria-label="Sửa giao dịch">✏️</button><button class="delete-btn" data-id="${t.id}" aria-label="Xóa giao dịch">🗑️</button></div>`;
 
     return `<tr>
       <td class="col-date"><span class="date-full">${dateFormatted}</span><span class="date-short">${dateShort}</span></td>
       <td class="col-member">${memberBadge}</td>
       <td class="col-type"><span class="badge ${t.type==='income'?'badge-income':'badge-expense'}">${t.type==='income'?'Thu':'Chi'}</span></td>
       <td class="col-cat">
-        <div class="tx-cat-cell">
-          <span class="tx-cat-name">${cat?cat.emoji+' '+cat.label:'📦 Khác'} ${beneTag}</span>
-          ${noteMobile}
+        <div class="tx-mobile-layout">
+          <div class="tx-cat-cell">
+            <span class="tx-cat-name">${cat?cat.emoji+' '+cat.label:'📦 Khác'} ${beneTag}</span>
+            ${noteMobile}
+          </div>
+          <div class="tx-mobile-side">
+            <span class="tx-mobile-amount amount-col ${t.type==='income'?'income':'expense'}">${amountText}</span>
+            ${actionButtons}
+          </div>
         </div>
       </td>
       <td class="col-note">${t.note||'—'}</td>
-      <td class="col-amount amount-col ${t.type==='income'?'income':'expense'}">${t.type==='income'?'+':'-'}${formatCurrency(t.amount)}</td>
-      <td class="col-actions"><div class="action-btns"><button class="edit-btn" data-id="${t.id}">✏️</button><button class="delete-btn" data-id="${t.id}">🗑️</button></div></td>
+      <td class="col-amount amount-col ${t.type==='income'?'income':'expense'}">${amountText}</td>
+      <td class="col-actions">${actionButtons}</td>
     </tr>`;
   },
 
