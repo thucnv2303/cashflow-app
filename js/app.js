@@ -2502,7 +2502,15 @@ const App = {
       const memberOptions = `
         <option value="family" ${p.memberId === 'family' ? 'selected' : ''}>👨‍👩‍👧‍👦 Cả nhà (Chung)</option>
         ${members.map(m => `
-          <option value="${m.id}" ${m.id === p.memberId ? 'selected' : ''}>👤 ${m.name}</option>
+          <option value="${m.id}" ${m.id === p.memberId ? 'selected' : ''}>👤 ${escapeHtml(m.name)}</option>
+        `).join('')}
+      `;
+
+      const selectedBeneficiaryId = p.beneficiaryId || 'family';
+      const beneficiaryOptions = `
+        <option value="family" ${selectedBeneficiaryId === 'family' ? 'selected' : ''}>👨‍👩‍👧‍👦 Cả nhà (Chung)</option>
+        ${members.map(m => `
+          <option value="${m.id}" ${m.id === selectedBeneficiaryId ? 'selected' : ''}>👤 ${escapeHtml(m.name)}</option>
         `).join('')}
       `;
 
@@ -2543,9 +2551,15 @@ const App = {
               </select>
             </div>
             <div>
-              <label style="font-size:0.72rem; color:var(--text-secondary); margin-bottom:2px; display:block;">Giao dịch của:</label>
+              <label style="font-size:0.72rem; color:var(--text-secondary); margin-bottom:2px; display:block;">Ai giao dịch?</label>
               <select class="pending-select pending-member-select" data-id="${p.id}">
                 ${memberOptions}
+              </select>
+            </div>
+            <div class="pending-beneficiary-control" ${isExp ? '' : 'hidden'}>
+              <label style="font-size:0.72rem; color:var(--text-secondary); margin-bottom:2px; display:block;">Chi cho ai?</label>
+              <select class="pending-select pending-beneficiary-select" data-id="${p.id}" ${isExp ? '' : 'disabled'}>
+                ${beneficiaryOptions}
               </select>
             </div>
           </div>
@@ -2564,6 +2578,8 @@ const App = {
         const itemEl = typeSelect.closest('.pending-card-item');
         const catSelect = itemEl?.querySelector('.pending-cat-select');
         const amountEl = itemEl?.querySelector('.pending-card-amount');
+        const beneficiaryControl = itemEl?.querySelector('.pending-beneficiary-control');
+        const beneficiarySelect = itemEl?.querySelector('.pending-beneficiary-select');
         const targetPending = pending.find(x => x.id === typeSelect.dataset.id);
         const selectedType = typeSelect.value === 'income' ? 'income' : 'expense';
         const categories = selectedType === 'income' ? incomeCats : expenseCats;
@@ -2583,6 +2599,12 @@ const App = {
           amountEl.classList.add(selectedType);
           amountEl.textContent = `${selectedType === 'expense' ? '-' : '+'}${formatCurrency(targetPending.amount)}`;
         }
+
+        if (beneficiaryControl && beneficiarySelect) {
+          const isExpense = selectedType === 'expense';
+          beneficiaryControl.hidden = !isExpense;
+          beneficiarySelect.disabled = !isExpense;
+        }
       });
     });
 
@@ -2594,12 +2616,16 @@ const App = {
         const typeSelect = itemEl.querySelector('.pending-type-select');
         const catSelect = itemEl.querySelector('.pending-cat-select');
         const memSelect = itemEl.querySelector('.pending-member-select');
+        const beneficiarySelect = itemEl.querySelector('.pending-beneficiary-select');
         const noteInput = itemEl.querySelector('.pending-note-input');
         const targetPending = pending.find(x => x.id === id);
         if (targetPending) {
           const selectedType = typeSelect?.value === 'income' ? 'income' : 'expense';
           const selectedCat = catSelect ? catSelect.value : targetPending.category;
           const selectedMember = memSelect ? memSelect.value : targetPending.memberId;
+          const selectedBeneficiary = selectedType === 'expense'
+            ? (beneficiarySelect?.value || 'family')
+            : 'family';
           
           Storage.approvePendingTransaction(id, {
             type: selectedType,
@@ -2608,7 +2634,7 @@ const App = {
             note: noteInput ? noteInput.value.trim() : (targetPending.note || ''),
             date: targetPending.date ? targetPending.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
             memberId: selectedMember !== 'family' ? selectedMember : (members[0] ? members[0].id : 'dad'),
-            beneficiaryId: selectedMember
+            beneficiaryId: selectedBeneficiary
           });
 
           this.showToast(`Đã lưu giao dịch ${formatCurrency(targetPending.amount)} vào sổ! ✅`);

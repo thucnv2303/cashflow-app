@@ -4176,6 +4176,10 @@ html[data-theme='light'] .pending-card-item {
   grid-column: 1 / -1;
 }
 
+.pending-beneficiary-control[hidden] {
+  display: none;
+}
+
 @media (max-width: 600px) {
   .pending-controls-row {
     grid-template-columns: 1fr;

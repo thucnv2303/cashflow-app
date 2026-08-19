@@ -387,13 +387,24 @@ const Storage = {
     return this.getPendingTransactions();
   },
   async approvePendingTransaction(pendingId, transactionData) {
-    this.add(transactionData);
+    // Pending approval owns the Sheet write so it can append the transaction
+    // and mark the pending row approved atomically without creating a duplicate.
+    const approvedTransaction = {
+      ...transactionData,
+      id: generateId(),
+      createdAt: new Date().toISOString()
+    };
+    const transactions = this.getLocal();
+    transactions.push(approvedTransaction);
+    this.saveLocal(transactions);
+
     let pending = this.getPendingTransactions();
     pending = pending.filter(p => p.id !== pendingId);
     this.savePendingTransactions(pending);
     if (this.isOnline()) {
-      this._sheetApiCall('approvePending', { pendingId, data: transactionData }).catch(e => console.warn(e));
+      this._sheetApiCall('approvePending', { pendingId, data: approvedTransaction }).catch(e => console.warn(e));
     }
+    return approvedTransaction;
   },
   async deletePendingTransaction(pendingId) {
     this.markPendingDismissed(pendingId);
