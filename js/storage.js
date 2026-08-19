@@ -752,8 +752,8 @@ const Storage = {
   getByMonth(year, month) {
     const transactions = this.getLocal();
     return transactions.filter(t => {
-      const date = new Date(t.date);
-      return date.getFullYear() === year && (date.getMonth() + 1) === month;
+      const date = parseDateValue(t.date);
+      return date && date.getFullYear() === year && (date.getMonth() + 1) === month;
     });
   },
   

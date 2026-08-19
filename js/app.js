@@ -218,9 +218,10 @@ const App = {
     this.renderCurrentPage();
     // Auto-fetch pending transactions from Google Sheet on startup
     this.fetchAndShowPending();
+    // Register on every device so installed PWAs always receive app updates.
+    this.registerServiceWorker();
     // Init notifications
     if ('Notification' in window && Notification.permission === 'granted') {
-      this.registerServiceWorker();
       this.scheduleReminderCheck();
     }
   },
@@ -787,7 +788,11 @@ const App = {
   renderRecentTransactions(transactions) {
     const c = document.getElementById('recentTransactions');
     if (!c) return;
-    const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+    const sorted = [...transactions].sort((a, b) => {
+      const dateA = parseDateValue(a.date)?.getTime() || 0;
+      const dateB = parseDateValue(b.date)?.getTime() || 0;
+      return dateB - dateA;
+    }).slice(0, 5);
     if (sorted.length === 0) {
       c.innerHTML = `<div class="empty-state"><span class="empty-icon">📝</span><p>Chưa có giao dịch nào</p><p class="text-muted">Bấm nút + để thêm giao dịch đầu tiên</p></div>`;
     } else {
@@ -815,13 +820,13 @@ const App = {
       if (fb) beneSelect.value = fb;
     }
 
-    if (fm) { const [y,m] = fm.split('-').map(Number); txs = txs.filter(t => { const d=new Date(t.date); return d.getFullYear()===y&&(d.getMonth()+1)===m; }); }
+    if (fm) { const [y,m] = fm.split('-').map(Number); txs = txs.filter(t => { const d=parseDateValue(t.date); return d&&d.getFullYear()===y&&(d.getMonth()+1)===m; }); }
     txs = this.filterTransactionsByScope(txs, fb);
     if (ft !== 'all') txs = txs.filter(t => t.type === ft);
     if (fc !== 'all') txs = txs.filter(t => t.category === fc);
     switch(fs) {
-      case 'date-desc': txs.sort((a,b) => new Date(b.date)-new Date(a.date)); break;
-      case 'date-asc': txs.sort((a,b) => new Date(a.date)-new Date(b.date)); break;
+      case 'date-desc': txs.sort((a,b) => (parseDateValue(b.date)?.getTime()||0)-(parseDateValue(a.date)?.getTime()||0)); break;
+      case 'date-asc': txs.sort((a,b) => (parseDateValue(a.date)?.getTime()||0)-(parseDateValue(b.date)?.getTime()||0)); break;
       case 'amount-desc': txs.sort((a,b) => b.amount-a.amount); break;
       case 'amount-asc': txs.sort((a,b) => a.amount-b.amount); break;
     }
@@ -1370,7 +1375,25 @@ const App = {
   async registerServiceWorker() {
     if ('serviceWorker' in navigator) {
       try {
-        await navigator.serviceWorker.register('./sw.js');
+        const hadController = Boolean(navigator.serviceWorker.controller);
+        const registration = await navigator.serviceWorker.register('./sw.js?v=3.33', {
+          updateViaCache: 'none'
+        });
+
+        if (!this._swControllerChangeBound) {
+          this._swControllerChangeBound = true;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (hadController && !this._swRefreshing) {
+              this._swRefreshing = true;
+              window.location.reload();
+            }
+          });
+        }
+
+        await registration.update();
+        if (registration.waiting) {
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
       } catch (e) {
         console.warn('SW registration failed:', e);
       }
@@ -1739,7 +1762,7 @@ const App = {
     transactions = this.filterTransactionsByScope(transactions, this.budgetScope);
 
     const filtered = transactions.filter(t => t.type === 'expense' && t.category === categoryId);
-    filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+    filtered.sort((a, b) => (parseDateValue(b.date)?.getTime() || 0) - (parseDateValue(a.date)?.getTime() || 0));
 
     const total = filtered.reduce((s, t) => s + t.amount, 0);
     const budgetAmount = Storage.getCategoryBudget(categoryId);
@@ -2941,7 +2964,7 @@ const App = {
     const beneTag = bene ? `<span style="font-size:0.68rem;color:var(--text-secondary);margin-left:2px;">(${bene.name})</span>` : '';
     const noteMobile = t.note ? `<div class="tx-note-mobile">${t.note}</div>` : '';
     const dateFormatted = formatDate(t.date);
-    const dateShort = t.date ? (t.date.split('-')[2] + '/' + t.date.split('-')[1]) : dateFormatted;
+    const dateShort = formatShortDate(t.date);
 
     return `<tr>
       <td class="col-date"><span class="date-full">${dateFormatted}</span><span class="date-short">${dateShort}</span></td>
