@@ -1376,7 +1376,7 @@ const App = {
     if ('serviceWorker' in navigator) {
       try {
         const hadController = Boolean(navigator.serviceWorker.controller);
-        const registration = await navigator.serviceWorker.register('./sw.js?v=3.34', {
+        const registration = await navigator.serviceWorker.register('./sw.js?v=3.35', {
           updateViaCache: 'none'
         });
 

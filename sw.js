@@ -1,5 +1,5 @@
 // CashFlow Service Worker - updates, offline fallback and notifications
-const CACHE_NAME = 'cashflow-v3.34';
+const CACHE_NAME = 'cashflow-v3.35';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
